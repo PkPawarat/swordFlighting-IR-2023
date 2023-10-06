@@ -3,7 +3,10 @@ classdef main
     %   Detailed explanation goes here
     
     properties
-        Property1
+        robot1;
+        robot2;
+
+
     end
     
     methods
@@ -11,9 +14,20 @@ classdef main
             
         end
         
-        function method1()
+        function SetupEnvironment(self)
 
         end
+        function SetupRobots(self)
+            self.robot1 = LinearUR5;
+            self.robot2 = babyYODA;
+
+            % set the location according table
+
+        end
+        function AssignTarget(self)
+            
+        end
+        
     end
 end
 
