@@ -23,7 +23,7 @@ classdef main
             % set the location according table
 
         end
-        function AssignTarget(self)
+        function AssignTarget(self, ss)
 
         end
             
