@@ -25,8 +25,9 @@ classdef main
             % set the location according table
 
         end
+
         function AssignTarget(self)
-            
+
         end
             
         function setupEnvironment(self)
