@@ -32,8 +32,8 @@ classdef babyYODA < RobotBaseClass
             link(1).qlim = [-0.8 -0.01];
             link(2).qlim = [-360 360]*pi/180;
             link(3).qlim = [-180 0]*pi/180;
-            link(4).qlim = [-30 120]*pi/180;
-            link(5).qlim = [-30 120]*pi/180;
+            link(4).qlim = [-30 170]*pi/180;
+            link(5).qlim = [0 180]*pi/180;
             % link(6).qlim = [-360 360]*pi/180;
             % link(7).qlim = [-360 360]*pi/180;
         
