@@ -24,9 +24,8 @@ classdef babyYODA < RobotBaseClass
             link(2) = Link([0      0.1599  0       -pi/2   0]);
             link(3) = Link([0      0       0.425   -pi     0]);
             link(4) = Link([0      0       0.39243 pi      0]);
-            link(5) = Link([0      0       0       -pi/2   0]);
-            % link(6) = Link([0      0.093   0       -pi/2	0]);
-            % link(7) = Link([0      0       0       0       0]);
+            link(5) = Link([0      0.05       0       -pi/2   0]);
+            % link(6) = Link([0      0.05       0       -pi/2   0]);
             
             % Incorporate joint limits
             link(1).qlim = [-0.8 -0.01];
@@ -34,11 +33,6 @@ classdef babyYODA < RobotBaseClass
             link(3).qlim = [-180 0]*pi/180;
             link(4).qlim = [-30 120]*pi/180;
             link(5).qlim = [-30 120]*pi/180;
-            % link(6).qlim = [-360 360]*pi/180;
-            % link(7).qlim = [-360 360]*pi/180;
-        
-            % link(3).offset = -pi/2;
-            % link(5).offset = -pi/2;
             
             self.model = SerialLink(link,'name',self.name);
         end
