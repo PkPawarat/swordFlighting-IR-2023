@@ -26,7 +26,7 @@ classdef LinearUR5 < RobotBaseClass
             link(4) = Link([0      0.1197  0.39243 pi      0]);
             link(5) = Link([0      0.093   0       -pi/2   0]);
             link(6) = Link([0      0.093   0       -pi/2	0]);
-            link(7) = Link([0      0       0       0       0]);
+            link(7) = Link([0      0.05       0       0       0]);
             
             % Incorporate joint limits
             link(1).qlim = [-0.8 -0.01];
