@@ -40,11 +40,27 @@ classdef main
             pose1 = self.robot1.model.fkine(self.robot1.homeQ).T;
             pose2 = self.robot2.model.fkine(self.robot2.homeQ).T;
 
-            self = self.pickupSwords(self.robot1, self.sword1StartLoc, [], self.swordfile1);
-            self.MoveRobotToLocation(self.robot1, pose1, self.sword1, self.sword1_vertices) ;
-            
-            self = self.pickupSwords(self.robot2, self.sword2StartLoc, [], self.swordfile2);
-            self.MoveRobotToLocation(self.robot2, pose2, self.sword2, self.sword2_vertices) ;
+            % Initialize parallel pool
+            poolobj = gcp('nocreate'); % If no pool, do not create new one.
+            if isempty(poolobj)
+                parpool('local');
+            end
+    
+            % Use parfor for parallel execution
+            parfor idx = 1:2
+                if idx == 1
+                    self.pickupSwords(self.robot1, self.sword1StartLoc, [], self.swordfile1);
+                    self.MoveRobotToLocation(self.robot1, pose1, self.sword1, self.sword1_vertices);
+                else
+                    self.pickupSwords(self.robot2, self.sword2StartLoc, [], self.swordfile2);
+                    self.MoveRobotToLocation(self.robot2, pose2, self.sword2, self.sword2_vertices);
+                end
+            end
+            % self = self.pickupSwords(self.robot1, self.sword1StartLoc, [], self.swordfile1);
+            % self.MoveRobotToLocation(self.robot1, pose1, self.sword1, self.sword1_vertices) ;
+            % 
+            % self = self.pickupSwords(self.robot2, self.sword2StartLoc, [], self.swordfile2);
+            % self.MoveRobotToLocation(self.robot2, pose2, self.sword2, self.sword2_vertices) ;
 
             % q = self.robot2.model.ikine(q, self.robot2.model.getpos, 'mask', [1,1,1,1,1,0])
         end
@@ -112,7 +128,12 @@ classdef main
         end
         
         function self = pickupSwords(self, robot, location, object, objectVertic)
-            location = transl(location) * troty(90, 'deg') * trotx(90, 'deg');
+            if length(location) == 3
+                location = transl(location) * troty(90, 'deg') * trotx(90, 'deg');
+            else
+                % location = location;
+            end
+            % location = transl(location) * troty(90, 'deg') * trotx(90, 'deg');
             self.MoveRobotToLocation(robot, location, object, objectVertic);
         end
         
