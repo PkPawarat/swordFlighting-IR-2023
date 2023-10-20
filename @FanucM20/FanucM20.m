@@ -11,9 +11,9 @@ classdef FanucM20 < RobotBaseClass
             if nargin < 1			
 				baseTr = eye(4);				
             end
-            self.model.base = self.model.base.T * baseTr;
+            self.model.base = self.model.base.T * baseTr * baseTr * trotx(0) * troty(0);
             
-            % self.PlotAndColourRobot();         
+            self.PlotAndColourRobot();         
     end
 
 %% Create the robot model
@@ -28,10 +28,10 @@ classdef FanucM20 < RobotBaseClass
         link(6) = Link([0        0.075     0        0      0]);
         
         % Incorporate joint limits
-        link(1).qlim = [-170 170]*pi/180;
+        link(1).qlim = [-180 180]*pi/180;
         link(2).qlim = [-100 160]*pi/180;
-        link(3).qlim = [-350 125]*pi/180;
-        link(4).qlim = [-310 90]*pi/180;
+        link(3).qlim = [-125 125]*pi/180;
+        link(4).qlim = [-225 50]*pi/180;
         link(5).qlim = [-180 180]*pi/180;
         link(6).qlim = [-450 450]*pi/180;
     
