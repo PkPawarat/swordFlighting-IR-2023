@@ -52,3 +52,18 @@ robot=SerialLink(L, 'name', 'Fanuc AM120iB/10L');
 
 robot.plot(q)
 robot.teach;
+
+
+%%
+clf
+robot2 = FanucM20();
+%%
+q = zeros(1, length(robot2.model.links));
+robot2.model.plot(q)
+%%
+a = robot2.model.fkine(robot2.model.getpos).T * troty(-90/2, 'deg') 
+
+b = robot2.model.ikine(a)
+
+robot2.model.plot(b)
+
