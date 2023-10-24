@@ -13,6 +13,7 @@ classdef FanucM20 < RobotBaseClass
             end
             self.model.base = self.model.base.T * baseTr;
             self.homeQ = zeros(1, length(self.model.links));
+            % self.model.teach
             % self.PlotAndColourRobot();         
     end
 
