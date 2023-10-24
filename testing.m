@@ -6,11 +6,11 @@ u = PlaceObject('table_v1.ply', [-0.4,2,0]);
 robot2 = babyYODA(transl(0,2,0.5));
 %%
 clf
-close all
+% close all
 
 r = FanucM20;
 r.model.teach();
-
+axis([-2 2 -2 2 0 3])
 
 %% USE THIS FOR CALLING
 close all
