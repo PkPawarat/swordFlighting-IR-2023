@@ -20,7 +20,7 @@ classdef FanucM20 < RobotBaseClass
     function CreateModel(self)   
         % Create the M20 model mounted on a linear rail
         
-        link(1) = Link([0        0.425     0        pi/2   0]);
+        link(1) = Link([0        0.475     0.1        pi/2   0]);
         link(2) = Link([0        0         0.840    pi     0]);
         link(3) = Link([0        0         0.27627  0      0]);
         link(4) = Link([0        0         0       -pi/2   0]);

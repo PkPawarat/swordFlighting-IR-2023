@@ -32,8 +32,8 @@ r.model.teach;
 %%
 close all
 hold on
-axis equal
-link(1) = Link([0        0.425     0  -pi/2   0  ]);
+axis([-2 2 -2 2 -2 3]);
+link(1) = Link([0        0.525     0.1  -pi/2   0  ]);
 link(2) = Link([0        0     0.840   pi     0  ]);
 link(3) = Link([0        0     0.27627    0  0  ]);
 link(4) = Link([0        0     0   -pi/2  0  ]);
@@ -44,7 +44,7 @@ name = 'myrobot'
 robot = SerialLink(link,'name', name);
 
 q = [0,0,0,0,0,0]
-robot.plot(q)
+robot.plot(q, 'scale', 0.5)
 robot.teach;
 
 %%
@@ -65,3 +65,5 @@ robot=SerialLink(L, 'name', 'Fanuc AM120iB/10L');
 
 robot.plot(q)
 robot.teach;
+
+%%
