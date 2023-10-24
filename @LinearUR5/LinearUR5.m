@@ -16,7 +16,7 @@ classdef LinearUR5 < RobotBaseClass
             self.model.base = self.model.base.T * baseTr * trotx(pi/2) * troty(pi/2);
             
             self.PlotAndColourRobot();      
-            self.model.teach
+            % self.model.teach
         end
 
 %% Create the robot model
