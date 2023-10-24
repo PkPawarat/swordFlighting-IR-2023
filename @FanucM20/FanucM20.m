@@ -11,7 +11,7 @@ classdef FanucM20 < RobotBaseClass
             if nargin < 1			
 				baseTr = eye(4);				
             end
-            self.model.base = self.model.base.T * baseTr * baseTr * trotx(0) * troty(0);
+            self.model.base = self.model.base.T * baseTr * trotx(0) * troty(0);
             
             self.PlotAndColourRobot();         
 

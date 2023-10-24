@@ -25,6 +25,20 @@ links = [];
 pose1{1} = transl([0 1 1]) * troty(0, 'deg');
 pose1{2} = transl([0 0 1]) * trotz(0, 'deg');
 
+% Setup Swords
+swords = cell(1,2);
+sword_vertices = cell(1,2);
+[swords{1}, sword_vertices{1}, swords{2}, sword_vertices{2}] = setupSwords(swordfile{1}, swordfile{2}, swordStartLoc{1}, swordStartLoc{2});
+%% ****************************** Prepare to fight pose need to be hard code but it need to be adjust later on *********************************************
+Preparepose = cell(1,2);
+Preparepose{1} = [-0.4 0 0 0 0 0 -pi/2];
+Preparepose{2} = [-pi/2 pi/2 -0 pi/3 0 0.5];
+
+
+
+
+
+
 % Setup Robots
 robot = cell(1,2);
 robot{1} = SetupRobot(baseRobot{1}, false);
@@ -38,19 +52,11 @@ links{2} = UpdateEachLink(robot{2});
 % Setup Environment
 ObjectInTheScene = setupEnvironment();
 
-% Setup Swords
-swords = cell(1,2);
-sword_vertices = cell(1,2);
-[swords{1}, sword_vertices{1}, swords{2}, sword_vertices{2}] = setupSwords(swordfile{1}, swordfile{2}, swordStartLoc{1}, swordStartLoc{2});
 
 pose = cell(1,2);
 pose{1} = robot{1}.model.fkine(robot{1}.homeQ).T;
 pose{2} = robot{2}.model.fkine(robot{2}.homeQ).T;
 
-%% ****************************** Prepare to fight pose need to be hard code but it need to be adjust later on *********************************************
-Preparepose = cell(1,2);
-Preparepose{1} = [-0.4 0 0 0 0 0 -pi/2];
-Preparepose{2} = [-pi/2 pi/2 -0 pi/3 0 0.5];
 
 
 %% Interleave the operations of robot1 and robot2
@@ -109,7 +115,7 @@ function robot = SetupRobot(base, newRobot)
     q = zeros(1, length(robot.model.links));
     if newRobot
         scale = 0.3;
-        robot.model.plot(q, 'scale', scale);
+        % robot.model.plot(q, 'scale', scale);
         robot.model.animate(q);
     else
         robot.model.animate(q);
@@ -257,6 +263,7 @@ function RotateObject(object, transformMatrix)
     transformedVertices = (transformMatrix * [vertices, ones(size(vertices, 1), 1)]')';
     set(object, 'Vertices', transformedVertices(:, 1:3));
 end
+
 %% UpdateEachLink
 function tr = UpdateEachLink(robot)
     q = zeros(1,robot.model.n); 
@@ -269,9 +276,8 @@ function tr = UpdateEachLink(robot)
 end
 
 %% Setup ellipsoid
-
 function robots = SetupEllipsoid(robots)
-  
+
     for i = 1:length(robots)
         robot = robots{i};
         
