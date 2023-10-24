@@ -7,6 +7,7 @@ classdef LinearUR5 < RobotBaseClass
     
     methods
 %% Define robot Function 
+% there is no teach function for this specific robot due to Prismatic joint 
         function self = LinearUR5(baseTr)
 			self.CreateModel();
             if nargin < 1			
@@ -14,7 +15,8 @@ classdef LinearUR5 < RobotBaseClass
             end
             self.model.base = self.model.base.T * baseTr * trotx(pi/2) * troty(pi/2);
             
-            self.PlotAndColourRobot();         
+            self.PlotAndColourRobot();      
+            self.model.teach
         end
 
 %% Create the robot model
