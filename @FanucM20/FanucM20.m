@@ -14,6 +14,7 @@ classdef FanucM20 < RobotBaseClass
             self.model.base = self.model.base.T * baseTr * baseTr * trotx(0) * troty(0);
             
             self.PlotAndColourRobot();         
+
     end
 
 %% Create the robot model
