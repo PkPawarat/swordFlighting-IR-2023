@@ -22,8 +22,8 @@ classdef FanucM20 < RobotBaseClass
         
         link(1) = Link([0        0.475     0.1        pi/2   0]);
         link(2) = Link([0        0         0.840    pi     0]);
-        link(3) = Link([0        0         0.27627  0      0]);
-        link(4) = Link([0        0         0       -pi/2   0]);
+        link(3) = Link([0        0         0.27627  -pi/2      0]);
+        link(4) = Link([0        0         0        0   0]);
         link(5) = Link([0       1.1665     0        pi/2   0]);
         link(6) = Link([0        0.075     0        0      0]);
         
