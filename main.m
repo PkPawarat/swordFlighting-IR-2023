@@ -366,11 +366,13 @@ classdef main
             end
         end
 
-        function points = UpdateEllipsoid(self, robot, tr)
+        function [points, radiis, ellipsoidCenters] = UpdateEllipsoid(self, robot, tr)
             links = robot.model.links;
             numLinks = robot.model.n+1;
             points = cell(1,numLinks);
-        
+            radiis = cell(1,numLinks);
+            ellipsoidCenters = cell(1,numLinks);
+            
             for i = 2:numLinks  % Start from the second link
                 a = robot.model.links(i-1).a;
                 d = robot.model.links(i-1).d;
@@ -389,10 +391,13 @@ classdef main
                     radii = [0.2, -distanceFromXYZ/2, 0.2];
                     ellipsoidCenter = [0, -distanceFromXYZ/2, 0];
                 end        
+                radiis{i} = radii;
+                ellipsoidCenters{i} = ellipsoidCenter;
+
                 % Extract the rotation matrix and translation vector for the current link
                 rotation = tr(1:3, 1:3, i);
                 translation = tr(1:3, 4, i);
-        
+                
                 % Create the ellipsoid in its local frame
                 [X,Y,Z] = ellipsoid(ellipsoidCenter(1), ellipsoidCenter(2), ellipsoidCenter(3), radii(1), radii(2), radii(3));
                 
@@ -443,8 +448,8 @@ classdef main
             poses1 = self.GetLinkPoses(robot1.model.getpos, robot1.model);
             poses2 = self.GetLinkPoses(robot2.model.getpos, robot2.model);
             
-            point1 = self.UpdateEllipsoid(robot1, poses1);
-            point2 = self.UpdateEllipsoid(robot2, poses2);
+            [point1, radiis, ellipsoidCenters] = self.UpdateEllipsoid(robot1, poses1);
+            [point2, radiis, ellipsoidCenters] = self.UpdateEllipsoid(robot2, poses2);
         
             % check collision between two robot
             for i = 2: size(poses1,3)
