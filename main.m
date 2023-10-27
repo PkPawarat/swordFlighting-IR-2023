@@ -44,7 +44,7 @@ classdef main
             clf;
             clc;
             hold on;
-            axis equal;
+            axis([-3 3 -3 3 0 3]);
             camlight;
     
             [self.swords{1}, self.sword_vertices{1}, self.swords{2}, self.sword_vertices{2}] = self.setupSwords(self.swordfile{1}, self.swordfile{2}, self.swordStartLoc{1}, self.swordStartLoc{2});
@@ -141,7 +141,7 @@ classdef main
         %% Setup Environment of the scene 
         function Object = SetupEnvironment(self)
             hold on;
-            axis equal;
+            
             Object{1} = PlaceObject('table_v1.ply', [-0.4,0,0]); % Assuming PlaceObject is a function or another script
             Object{2} = PlaceObject('table_v1.ply', [-0.4,1,0]);
 
