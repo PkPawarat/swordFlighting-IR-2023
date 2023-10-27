@@ -11,7 +11,7 @@ swordfile = cell(1,2);
 baseRobot = cell(1,2);
 
 swordStartLoc{1} = [-0.4 -0.5 0.5];
-swordStartLoc{2} = [-0.4 1.55 0.5];
+swordStartLoc{2} = [-0.4 -0.6 0.5];
 swordfile{1} = "model3D/Lightsaber2.ply";
 swordfile{2} = "model3D/Lightsaber2.ply";
 baseRobot{1} = transl(0,0,0.5);
@@ -29,6 +29,19 @@ pose1{2} = transl([0 0 1]) * trotz(0, 'deg');
 swords = cell(1,2);
 sword_vertices = cell(1,2);
 [swords{1}, sword_vertices{1}, swords{2}, sword_vertices{2}] = setupSwords(swordfile{1}, swordfile{2}, swordStartLoc{1}, swordStartLoc{2});
+
+%% 
+[sword_vertices] = UpdateSwords(swords);
+
+% plot3(sword_vertices{1}(:,1), sword_vertices{1}(:,2), sword_vertices{1}(:,3), 'b-'); % Plot sword 1
+% plotBoundingBox(sword_vertices{1});
+% plot3(sword_vertices{2}(:,1), sword_vertices{2}(:,2), sword_vertices{2}(:,3), 'g-'); % Plot sword 2
+% plotBoundingBox(sword_vertices{2});
+% hold off;
+isColliding = checkSwordCollision(sword_vertices{1}, sword_vertices{2})
+
+
+
 %% ****************************** Prepare to fight pose need to be hard code but it need to be adjust later on *********************************************
 Preparepose = cell(1,2);
 Preparepose{1} = [-0.4 0 0 0 0 0 -pi/2];
@@ -39,23 +52,24 @@ Preparepose{2} = [-pi/2 pi/2 -0 pi/3 0 0.5];
 
 
 
-% Setup Robots
+%% Setup Robots
 robot = cell(1,2);
-robot{1} = SetupRobot(baseRobot{1}, false);
-robot{2} = SetupRobot(baseRobot{2}, true);
+% robot{1} = SetupRobot(baseRobot{1}, false);
+% robot{2} = SetupRobot(baseRobot{2}, true);
 
 % Setup Ellipsoid
-robot = SetupEllipsoid(robot);
+% robot = SetupEllipsoid(robot);
 
-links{1} = UpdateEachLink(robot{1});
-links{2} = UpdateEachLink(robot{2});
+% links{1} = UpdateEachLink(robot{1});
+% links{2} = UpdateEachLink(robot{2});
 % Setup Environment
 ObjectInTheScene = setupEnvironment();
 
-
-pose = cell(1,2);
-pose{1} = robot{1}.model.fkine(robot{1}.homeQ).T;
-pose{2} = robot{2}.model.fkine(robot{2}.homeQ).T;
+plotBoundingBox(ObjectInTheScene{1})
+plotBoundingBox(ObjectInTheScene{2})
+% pose = cell(1,2);
+% pose{1} = robot{1}.model.fkine(robot{1}.homeQ).T;
+% pose{2} = robot{2}.model.fkine(robot{2}.homeQ).T;
 
 
 
@@ -132,7 +146,7 @@ function ObjectInTheScene = setupEnvironment()
 
     ObjectInTheScene = cell(size(Object));
     % Assign Vertices for object 
-    for i=1:size(Object)
+    for i=1:length(Object)
         ObjectInTheScene{i} = get(Object{i}, 'Vertices');
     end
     view(3);
@@ -294,6 +308,26 @@ function robots = SetupEllipsoid(robots)
             % Use the computed distance to determine the radii of the ellipsoid
             radii = [distanceFromXYZ/1.2, 0.1, 0.1];  % Adjust as needed
             center = [-distanceFromXYZ/2 0 0];
+
+            a = robot.model.links(k-1).a;
+            d = robot.model.links(k-1).d;
+            
+            % Compute the distance for ellipsoid size
+            distanceFromXYZ = sqrt(a^2 + d^2);
+            
+            % Handle the case where distanceFromXYZ is 0
+            if distanceFromXYZ == 0
+                distanceFromXYZ = 0.1; % Set a minimum value or adjust as needed
+            end
+            if a ~= 0
+                radii = [-distanceFromXYZ/2, 0.2, 0.2];
+                center = [-distanceFromXYZ/2, 0, 0];
+            else
+                radii = [0.2, -distanceFromXYZ/2, 0.2];
+                center = [0, -distanceFromXYZ/2, 0];
+            end    
+            
+
             [X,Y,Z] = ellipsoid(center(1), center(2), center(3), radii(1), radii(2), radii(3));
             robot.model.points{k} = [X(:),Y(:),Z(:)];
             warning off
@@ -304,11 +338,11 @@ function robots = SetupEllipsoid(robots)
         
         robots{i} = robot;
     end
-    % workspace_limits = [-2 3 -1 2 -0 3]; % Example limits, adjust as needed
-    % robots{1}.model.plot3d(robots{1}.model.getpos, 'workspace', workspace_limits);
-    % robots{2}.model.plot3d(robots{2}.model.getpos, 'workspace', workspace_limits);
-    % axis(workspace_limits);
-    % view(3)
+    workspace_limits = [-2 3 -1 2 -0 3]; % Example limits, adjust as needed
+    robots{1}.model.plot3d(robots{1}.model.getpos, 'workspace', workspace_limits);
+    robots{2}.model.plot3d(robots{2}.model.getpos, 'workspace', workspace_limits);
+    axis(workspace_limits);
+    view(3)
     axis equal
 end
 
@@ -432,7 +466,42 @@ function collision = CheckCollision(robot1, robot2)
     end
 end
 
+function isColliding = checkSwordCollision(vertices1, vertices2)
+    % Calculate the bounding box for each set of vertices
+    min1 = min(vertices1);
+    max1 = max(vertices1);
+    min2 = min(vertices2);
+    max2 = max(vertices2);
 
+    % Check for overlap in each dimension
+    overlapX = (min1(1) <= max2(1)) && (max1(1) >= min2(1));
+    overlapY = (min1(2) <= max2(2)) && (max1(2) >= min2(2));
+    overlapZ = (min1(3) <= max2(3)) && (max1(3) >= min2(3));
+
+    % If there is overlap in all three dimensions, the objects are colliding
+    isColliding = overlapX && overlapY && overlapZ;
+end
+function plotBoundingBox(vertices)
+    minV = min(vertices);
+    maxV = max(vertices);
+    for i = 1:3
+        range{i} = linspace(minV(i), maxV(i), 2);
+    end
+    [X, Y, Z] = meshgrid(range{:});
+    X = X(:);
+    Y = Y(:);
+    Z = Z(:);
+    plot3(X, Y, Z, 'ro'); % Plot corners of the bounding box
+    hold on;
+end
+function [sword_vertices] = UpdateSwords(swords)
+    sword_vertices = cell(1,length(swords));
+    for i=1:length(swords)
+        sword_vertices{i} = get(swords{i}, 'Vertices');
+    end
+    % sword2_vertices = get(sword2, 'Vertices');
+    % sword_vertices = {sword1_vertices, sword2_vertices};
+end
 % function collision = CheckCollision(robot1, robot2)
 %     % Get link poses for both robots
 %     poses1 = GetLinkPoses(robot1.model.getpos, robot1.model);
