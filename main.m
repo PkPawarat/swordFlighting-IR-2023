@@ -49,7 +49,7 @@ classdef main
             clf;
             clc;
             hold on;
-            axis equal;
+            axis([-3 3 -3 3 0 3]);
             camlight;
 
             self.swordStartLoc{1} = [-0.4 -0.5 0.5];
@@ -189,7 +189,7 @@ classdef main
         %% Setup Environment of the scene 
         function ObjectInTheScene = setupEnvironment(self)
             hold on;
-            axis equal;
+            
             Object{1} = PlaceObject('table_v1.ply', [-0.4,0,0]); % Assuming PlaceObject is a function or another script
             Object{2} = PlaceObject('table_v1.ply', [-0.4,1,0]);
 
