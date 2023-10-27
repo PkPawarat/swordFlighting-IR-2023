@@ -1,45 +1,7 @@
-classdef main < matlab.apps.AppBase
-    %MAIN Summary of this class goes here
-    %   Detailed explanation goes here
-    
-    properties
-        % Properties
-        robots = cell(1,2);
-        swordStartLoc = cell(1,2);
-        swordfile = cell(1,2);
-        baseRobot = cell(1,2);
-        
-        % swordStartLoc{1} = [-0.4 -0.5 0.5];
-        % swordStartLoc{2} = [-0.4 1.55 0.5];
-        % swordfile{1} = "model3D/Lightsaber2.ply";
-        % swordfile{2} = "model3D/Lightsaber2.ply";
-        % baseRobot{1} = transl(0,0,0.5);
-        % baseRobot{2} = transl(0,1,0.5);
-        steps = 50;
+classdef swordFighting_app_test < matlab.apps.AppBase
 
-        % setup each link
-        links = [];
-
-        % Setup robot pose
-        pose = cell(1,2);
-        pose1 = cell(1,2);
-        pose2 = cell(1,2);
-        % pose1{1} = transl([0 1 1]) * troty(0, 'deg');
-        % pose1{2} = transl([0 0 1]) * trotz(0, 'deg');
-
-        % Setup Swords
-        swords = cell(1,2);
-        sword_vertices = cell(1,2);
-        
-        
-        %% ****************************** Prepare to fight pose need to be hard code but it need to be adjust later on *********************************************
-        Preparepose = cell(1,2);
-        % Preparepose{1} = [-0.4 0 0 0 0 0 -pi/2];
-        % Preparepose{2} = [-pi/2 pi/2 -0 pi/3 0 0.5];
-        
-        % Object in the scence that are 3D models
-        ObjectInTheScene=[];
-
+    % Properties that correspond to app components
+    properties (Access = public)
         UIFigure              matlab.ui.Figure
         StopButton_2          matlab.ui.control.Button
         StopButton            matlab.ui.control.Button
@@ -54,11 +16,64 @@ classdef main < matlab.apps.AppBase
         Player1_pos2          matlab.ui.control.Button
         Player1_pos1          matlab.ui.control.Button
         UIAxes                matlab.ui.control.UIAxes
+    end
 
-        advance = false;            % set advance to true if want to turn on GUI
+    properties (Access = public)
+        % Properties
+        robots = cell(1,2);
+        swordStartLoc = cell(1,2);
+        swordfile = cell(1,2);
+        baseRobot = cell(1,2);
+        
+        steps = 50;
+
+        % setup each link
+        links = [];
+
+        % Setup robot pose
+        pose = cell(1,2);
+        pose1 = cell(1,2);
+        pose2 = cell(1,2);
+
+        % Setup Swords
+        swords = cell(1,2);
+        sword_vertices = cell(1,2);
+        
+        
+        %% ****************************** Prepare to fight pose need to be hard code but it need to be adjust later on *********************************************
+        Preparepose = cell(1,2);
+        
+        % Object in the scence that are 3D models
+        ObjectInTheScene=[];
     end
     
-    methods
+    % App creation and deletion
+    methods (Access = public)
+
+        % Construct app
+        function app = swordFighting_app
+
+            % Create UIFigure and components
+            createComponents(app)
+
+            % Register the app with App Designer
+            registerApp(app, app.UIFigure)
+
+            if nargout == 0
+                clear app
+            end
+        end
+
+        % Code that executes before app deletion
+        function delete(app)
+
+            % Delete UIFigure when app is deleted
+            delete(app.UIFigure)
+        end
+    end
+    
+    methods (Access = private)
+        
         function self = main()
             % Initialization and Setup
             clf;
@@ -66,8 +81,6 @@ classdef main < matlab.apps.AppBase
             hold on;
             axis equal;
             camlight;
-            
-            self.
 
             self.swordStartLoc{1} = [-0.4 -0.5 0.5];
             self.swordStartLoc{2} = [-0.4 1.55 0.5];
@@ -130,155 +143,7 @@ classdef main < matlab.apps.AppBase
             else
                 disp('No collision detected.');
             end
-            
-
-            % self = self.SetupRobots();
-            
-            % self.setupEnvironment();
-            % self = self.setupSwords();
-            
-            % pose1 = self.robot1.model.fkine(self.robot1.homeQ).T;
-            % pose2 = self.robot2.model.fkine(self.robot2.homeQ).T;
-
-            % % Initialize parallel pool
-            % poolobj = gcp('nocreate'); % If no pool, do not create new one.
-            % if isempty(poolobj)
-            %     parpool('local');
-            % end
-    
-            % % Use parfor for parallel execution
-            % parfor idx = 1:2
-            %     if idx == 1
-            %         self.pickupSwords(self.robot1, self.sword1StartLoc, [], self.swordfile1);
-            %         self.MoveRobotToLocation(self.robot1, pose1, self.sword1, self.sword1_vertices);
-            %     else
-            %         self.pickupSwords(self.robot2, self.sword2StartLoc, [], self.swordfile2);
-            %         self.MoveRobotToLocation(self.robot2, pose2, self.sword2, self.sword2_vertices);
-            %     end
-            % end
-            % % self = self.pickupSwords(self.robot1, self.sword1StartLoc, [], self.swordfile1);
-            % % self.MoveRobotToLocation(self.robot1, pose1, self.sword1, self.sword1_vertices) ;
-            % % 
-            % % self = self.pickupSwords(self.robot2, self.sword2StartLoc, [], self.swordfile2);
-            % % self.MoveRobotToLocation(self.robot2, pose2, self.sword2, self.sword2_vertices) ;
-
-            % % q = self.robot2.model.ikine(q, self.robot2.model.getpos, 'mask', [1,1,1,1,1,0])
         end
-
-        % Construct app
-        function app = swordFighting_app
-
-            % Create UIFigure and components
-            createComponents(app)
-
-            % Register the app with App Designer
-            registerApp(app, app.UIFigure)
-
-            if nargout == 0
-                clear app
-            end
-        end
-        function Player2_pos2Pushed(app, event)
-            
-        end
-        function createComponents(app)
-
-            % Create UIFigure and hide until all components are created
-            app.UIFigure = uifigure('Visible', 'off');
-            app.UIFigure.Position = [100 100 684 516];
-            app.UIFigure.Name = 'MATLAB App';
-
-            % Create UIAxes
-            app.UIAxes = uiaxes(app.UIFigure);
-            title(app.UIAxes, 'Title')
-            xlabel(app.UIAxes, 'X')
-            ylabel(app.UIAxes, 'Y')
-            zlabel(app.UIAxes, 'Z')
-            app.UIAxes.XTick = [0 0.2 0.4 0.6 0.8 3];
-            app.UIAxes.XTickLabel = {'0'; '0.2'; '0.4'; '0.6'; '0.8'; '3'};
-            app.UIAxes.YTick = [0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 3];
-            app.UIAxes.YTickLabel = {'0'; '0.1'; '0.2'; '0.3'; '0.4'; '0.5'; '0.6'; '0.7'; '0.8'; '3'};
-            app.UIAxes.ZTick = [0 0.5 3];
-            app.UIAxes.HandleVisibility = 'callback';
-            app.UIAxes.Position = [154 161 377 324];
-
-            % Create Player1_pos1
-            app.Player1_pos1 = uibutton(app.UIFigure, 'push');
-            app.Player1_pos1.Position = [53 370 68 37];
-            app.Player1_pos1.Text = 'Position 1';
-
-            % Create Player1_pos2
-            app.Player1_pos2 = uibutton(app.UIFigure, 'push');
-            app.Player1_pos2.Position = [53 306 68 37];
-            app.Player1_pos2.Text = 'Position 2';
-
-            % Create Player1_pos3
-            app.Player1_pos3 = uibutton(app.UIFigure, 'push');
-            app.Player1_pos3.Position = [53 246 68 37];
-            app.Player1_pos3.Text = 'Position 3';
-
-            % Create Player2_pos1
-            app.Player2_pos1 = uibutton(app.UIFigure, 'push');
-            app.Player2_pos1.Position = [566 370 68 37];
-            app.Player2_pos1.Text = 'Position 1';
-
-            % Create Player2_pos2
-            app.Player2_pos2 = uibutton(app.UIFigure, 'push');
-            app.Player2_pos2.ButtonPushedFcn = createCallbackFcn(app, @Player2_pos2Pushed, true);
-            app.Player2_pos2.Position = [566 306 68 37];
-            app.Player2_pos2.Text = 'Position 2';
-
-            % Create Player2_pos3
-            app.Player2_pos3 = uibutton(app.UIFigure, 'push');
-            app.Player2_pos3.Position = [566 246 68 37];
-            app.Player2_pos3.Text = 'Position 3';
-
-            % Create Player2TextAreaLabel
-            app.Player2TextAreaLabel = uilabel(app.UIFigure);
-            app.Player2TextAreaLabel.HorizontalAlignment = 'center';
-            app.Player2TextAreaLabel.Position = [575 441 49 22];
-            app.Player2TextAreaLabel.Text = 'Player 2';
-
-            % Create Player1TextAreaLabel
-            app.Player1TextAreaLabel = uilabel(app.UIFigure);
-            app.Player1TextAreaLabel.HorizontalAlignment = 'center';
-            app.Player1TextAreaLabel.Position = [62 441 49 22];
-            app.Player1TextAreaLabel.Text = 'Player 1';
-
-            % Create FightButton
-            app.FightButton = uibutton(app.UIFigure, 'push');
-            app.FightButton.Position = [312 127 94 24];
-            app.FightButton.Text = 'Fight!';
-
-            % Create Player1WinsLabel
-            app.Player1WinsLabel = uilabel(app.UIFigure);
-            app.Player1WinsLabel.HorizontalAlignment = 'center';
-            app.Player1WinsLabel.Position = [302 89 113 22];
-            app.Player1WinsLabel.Text = 'Player 1 Wins!';
-
-            % Create StopButton
-            app.StopButton = uibutton(app.UIFigure, 'push');
-            app.StopButton.BackgroundColor = [1 0 0];
-            app.StopButton.FontColor = [1 1 1];
-            app.StopButton.Position = [30 75 113 53];
-            app.StopButton.Text = 'Stop';
-
-            % Create StopButton_2
-            app.StopButton_2 = uibutton(app.UIFigure, 'push');
-            app.StopButton_2.BackgroundColor = [1 0 0];
-            app.StopButton_2.FontColor = [1 1 1];
-            app.StopButton_2.Position = [543 75 113 53];
-            app.StopButton_2.Text = 'Stop';
-
-            % Show the figure after all components are created
-            app.UIFigure.Visible = 'on';
-        end
-        function delete(app)
-
-            % Delete UIFigure when app is deleted
-            delete(app.UIFigure)
-        end
-
         function execution(self)
             % pickup the sword
 
@@ -531,11 +396,6 @@ classdef main < matlab.apps.AppBase
                 
                 % Store the points
                 points{i} = translatedPoints';
-                
-                % Visualize the ellipsoid
-                % surf(reshape(translatedPoints(1,:), size(X)), ...
-                %      reshape(translatedPoints(2,:), size(Y)), ...
-                %      reshape(translatedPoints(3,:), size(Z)));
             end
         end
 
@@ -591,25 +451,6 @@ classdef main < matlab.apps.AppBase
                     end
                 end
             end
-
-            % % check collision between two robot
-            % for i = 2: size(poses2,3)
-            %     for k = 2: size(point1,2)
-            %         distanceFromXYZ = robot2.model.links(i-1).a';
-            %         radii = [distanceFromXYZ/1.5, 0.3, 0.3];
-            % 
-            %         cubePointsAndOnes = [inv(poses2(:,:,i)) * [point1{k},ones(size(point1{k},1),1)]']';
-            %         updatedCubePoints = cubePointsAndOnes(:,1:3);
-            %         base = robot2.model.base.T;
-            %         algebraicDist = self.GetAlgebraicDist(updatedCubePoints, base(1:3,4)', radii);
-            %         pointsInside = find(algebraicDist < 1);
-            %         if length(pointsInside) > 0
-            %             disp(['Base on robot2 There are ', num2str(size(pointsInside,1)),' tr inside the ',num2str(i), ' points inside the ',num2str(k), ' th ellipsoid']);
-            %             collision = true;
-            %             return;
-            %         end
-            %     end
-            % end
         end
 
         %% function 
@@ -621,169 +462,116 @@ classdef main < matlab.apps.AppBase
             catch
                 return
             end
-        end
-
-        
-
-
-        
-        % function self = setupEnvironment(self)
-        %     hold on;
-        %     PlaceObject('table_v1.ply', [-0.4,0,0]);
-        %     PlaceObject('table_v1.ply', [-0.4,1,0]);
-        %     view(3);
-
-        %     axis([-2 2 -2 2 0 3]);
-        % end
-        
-        % function self = setupSwords(self)
-        %     self.sword1 = self.DeleteObject(self.sword1);
-        %     self.sword2 = self.DeleteObject(self.sword2);
-
-        %     self.sword1 = PlaceObject(self.swordfile1);
-        %     self.sword2 = PlaceObject(self.swordfile2);
-
-        %     self.sword1_vertices = get(self.sword1, 'Vertices');
-        %     self.sword2_vertices  = get(self.sword2, 'Vertices');
-        %     % pose1 = self.robot1.model.fkine(self.robot1.model.getpos).T;
-        %     self.RotateObject(self.sword1, (transl(self.sword1StartLoc) * trotx(90, 'deg') ));
-        %     self.RotateObject(self.sword2, (transl(self.sword2StartLoc) * trotx(90, 'deg') ));
-
-        %     % self.sword1_vertices = get(self.sword1, 'Vertices');
-        %     % self.sword2_vertices  = get(self.sword2, 'Vertices');
-        %     % [minXYZ, maxXYZ] = getObjectMinMaxVertices(self, self.sword1);
-        % end
-        
-        % function self = pickupSwords(self, robot, location, object, objectVertic)
-        %     if length(location) == 3
-        %         location = transl(location) * troty(90, 'deg') * trotx(90, 'deg');
-        %     else
-        %         % location = location;
-        %     end
-        %     % location = transl(location) * troty(90, 'deg') * trotx(90, 'deg');
-        %     self.MoveRobotToLocation(robot, location, object, objectVertic);
-        % end
-        
-        % function [self, sword]= MoveSwords(self, robot, sword, sword_vertices)
-        %     if (isempty(sword)) 
-        %         return;  
-        %     end
-        %     robotPose = robot.model.fkine(robot.model.getpos).T * trotz(90, 'deg');
-        %     transformedVertices = [sword_vertices, ones(size(sword_vertices,1),1)] * robotPose';
-        %     set(sword,'Vertices',transformedVertices(:,1:3));
-        % end
-        
-        
-        % function self = MoveRobotToLocation(self, robot, location, object, objectVertic)
-        %     if length(location) == 3
-        %         MoveToObject = transl(location) * troty(-90,'deg');% * trotz(90,'deg');
-        %     else
-        %         MoveToObject = location;
-        %     end
-        %     initialGuess = robot.model.getpos;
-        %     try 
-        %         newQ1 = robot.model.ikine(MoveToObject, 'q0', initialGuess, 'forceSoln');
-        %     catch 
-        %         newQ1 = robot.model.ikcon(MoveToObject, initialGuess);
-        %     end
-        %     if isempty(newQ1)
-        %         newQ1 = robot.model.ikcon(MoveToObject, 'q0', initialGuess);
-        %     end 
-        %     qMatrix = jtraj(initialGuess,newQ1,self.steps);
-        %     for i = 1:length(qMatrix)
-        %         try 
-        %             robot.model.animate(qMatrix(i,:)); 
-        %         catch 
-        %             disp('Unable to move in this matrix : ')
-        %             display(qMatrix(i,:))
-        %         end
-        %         [self, object] = self.MoveSwords(robot, object, objectVertic)
-        %         pause(0.001);
-               
-        %     end
-        % end
-
-        % function self = DeleteObject(self, object)
-        %     try 
-        %         delete(object); 
-        %     end
-        % end
-        % function RotateObject(self, object, transformMatrix)
-        %     % Get the object's vertices
-        %     vertices = get(object, 'Vertices');
-        %     % Apply the rotation transformation to the object's vertices
-        %     transformedVertices = (transformMatrix * [vertices, ones(size(vertices, 1), 1)]')';
-        %     % Update the object's vertices with the rotated vertices
-        %     set(object, 'Vertices', transformedVertices(:, 1:3));
-        % end
-
-        % function MoveObject(object, rotationMatrix, rotationCenter)
-        %     % Get the object's vertices
-        %     vertices = get(object, 'Vertices');
-            
-        %     % Translate vertices to origin based on rotation center
-        %     vertices = vertices - repmat(rotationCenter, size(vertices, 1), 1);
-            
-        %     % Rotate the vertices
-        %     rotatedVertices = (rotationMatrix * vertices')';
-            
-        %     % Translate back to original location
-        %     rotatedVertices = rotatedVertices + repmat(rotationCenter, size(vertices, 1), 1);
-            
-        %     % Update the object's vertices
-        %     set(object, 'Vertices', rotatedVertices);
-        % end
-
-
-        % function [minXYZ, maxXYZ] = getObjectMinMaxVertices(self, object)
-        %     % Extracting the vertices of the object
-        %     vertices = get(object, 'Vertices');
-            
-        %     % Finding the min and max points along each axis
-        %     minX = min(vertices(:, 1));
-        %     minY = min(vertices(:, 2));
-        %     minZ = min(vertices(:, 3));
-            
-        %     maxX = max(vertices(:, 1));
-        %     maxY = max(vertices(:, 2));
-        %     maxZ = max(vertices(:, 3));
-            
-        %     minXYZ = [minX, minY, minZ];
-        %     maxXYZ = [maxX, maxY, maxZ];
-            
-        %     % Displaying the results
-        %     % fprintf('Min XYZ: [%f, %f, %f]\n', minXYZ);
-        %     % fprintf('Max XYZ: [%f, %f, %f]\n', maxXYZ);
-        % end
-        
-        
+        end        
     end
+    
+
+    % Callbacks that handle component events
+    methods (Access = private)
+
+        % Button pushed function: Player2_pos2
+        function Player2_pos2Pushed(app, event)
+            
+        end
+    end
+
+    % Component initialization
+    methods (Access = private)
+
+        % Create UIFigure and components
+        function createComponents(app)
+
+            % Create UIFigure and hide until all components are created
+            app.UIFigure = uifigure('Visible', 'off');
+            app.UIFigure.Position = [100 100 684 516];
+            app.UIFigure.Name = 'MATLAB App';
+
+            % Create UIAxes
+            app.UIAxes = uiaxes(app.UIFigure);
+            title(app.UIAxes, 'Title')
+            xlabel(app.UIAxes, 'X')
+            ylabel(app.UIAxes, 'Y')
+            zlabel(app.UIAxes, 'Z')
+            app.UIAxes.XTick = [0 0.2 0.4 0.6 0.8 3];
+            app.UIAxes.XTickLabel = {'0'; '0.2'; '0.4'; '0.6'; '0.8'; '3'};
+            app.UIAxes.YTick = [0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 3];
+            app.UIAxes.YTickLabel = {'0'; '0.1'; '0.2'; '0.3'; '0.4'; '0.5'; '0.6'; '0.7'; '0.8'; '3'};
+            app.UIAxes.ZTick = [0 0.5 3];
+            app.UIAxes.HandleVisibility = 'callback';
+            app.UIAxes.Position = [154 161 377 324];
+
+            % Create Player1_pos1
+            app.Player1_pos1 = uibutton(app.UIFigure, 'push');
+            app.Player1_pos1.Position = [53 370 68 37];
+            app.Player1_pos1.Text = 'Position 1';
+
+            % Create Player1_pos2
+            app.Player1_pos2 = uibutton(app.UIFigure, 'push');
+            app.Player1_pos2.Position = [53 306 68 37];
+            app.Player1_pos2.Text = 'Position 2';
+
+            % Create Player1_pos3
+            app.Player1_pos3 = uibutton(app.UIFigure, 'push');
+            app.Player1_pos3.Position = [53 246 68 37];
+            app.Player1_pos3.Text = 'Position 3';
+
+            % Create Player2_pos1
+            app.Player2_pos1 = uibutton(app.UIFigure, 'push');
+            app.Player2_pos1.Position = [566 370 68 37];
+            app.Player2_pos1.Text = 'Position 1';
+
+            % Create Player2_pos2
+            app.Player2_pos2 = uibutton(app.UIFigure, 'push');
+            app.Player2_pos2.ButtonPushedFcn = createCallbackFcn(app, @Player2_pos2Pushed, true);
+            app.Player2_pos2.Position = [566 306 68 37];
+            app.Player2_pos2.Text = 'Position 2';
+
+            % Create Player2_pos3
+            app.Player2_pos3 = uibutton(app.UIFigure, 'push');
+            app.Player2_pos3.Position = [566 246 68 37];
+            app.Player2_pos3.Text = 'Position 3';
+
+            % Create Player2TextAreaLabel
+            app.Player2TextAreaLabel = uilabel(app.UIFigure);
+            app.Player2TextAreaLabel.HorizontalAlignment = 'center';
+            app.Player2TextAreaLabel.Position = [575 441 49 22];
+            app.Player2TextAreaLabel.Text = 'Player 2';
+
+            % Create Player1TextAreaLabel
+            app.Player1TextAreaLabel = uilabel(app.UIFigure);
+            app.Player1TextAreaLabel.HorizontalAlignment = 'center';
+            app.Player1TextAreaLabel.Position = [62 441 49 22];
+            app.Player1TextAreaLabel.Text = 'Player 1';
+
+            % Create FightButton
+            app.FightButton = uibutton(app.UIFigure, 'push');
+            app.FightButton.Position = [312 127 94 24];
+            app.FightButton.Text = 'Fight!';
+
+            % Create Player1WinsLabel
+            app.Player1WinsLabel = uilabel(app.UIFigure);
+            app.Player1WinsLabel.HorizontalAlignment = 'center';
+            app.Player1WinsLabel.Position = [302 89 113 22];
+            app.Player1WinsLabel.Text = 'Player 1 Wins!';
+
+            % Create StopButton
+            app.StopButton = uibutton(app.UIFigure, 'push');
+            app.StopButton.BackgroundColor = [1 0 0];
+            app.StopButton.FontColor = [1 1 1];
+            app.StopButton.Position = [30 75 113 53];
+            app.StopButton.Text = 'Stop';
+
+            % Create StopButton_2
+            app.StopButton_2 = uibutton(app.UIFigure, 'push');
+            app.StopButton_2.BackgroundColor = [1 0 0];
+            app.StopButton_2.FontColor = [1 1 1];
+            app.StopButton_2.Position = [543 75 113 53];
+            app.StopButton_2.Text = 'Stop';
+
+            % Show the figure after all components are created
+            app.UIFigure.Visible = 'on';
+        end
+    end
+
+    
 end
-
-
-
-
-% TODO 
-% 
-% add gripper     // lauren
-% add sword       // lauren
-% add collision   // Pk
-% add avoidance collision // pk 
-% 
-% hard code for ways point of the robot aims //Pk
-% 
-% 
-% 
-% configuration for gui  // lauren
-% 
-% code pseudo
-% 
-%     Start environment 
-%     show the life of the robot 
-%     pickup sword 
-%     start flighting until no more life left
-
-% in demonstration 
-
-
-

@@ -68,8 +68,25 @@ robot.teach;
 
 
 %%
-clf
-robot2 = FanucM20();
+close all
+robot2 = LinearUR5;
+% robot2.model.teach;
+axis([-2 2 -2 2 0 3])
+
+q1 = [-0.1,0,0,0,0,0,0];
+
+q2 = [-0.8,0,0,0,0,0,0];
+steps = 25;
+qpath = jtraj(robot2.model.getpos, q2, steps);
+pause(5);
+for l = 1:length(qpath)
+        robot2.model.animate(qpath(l,:));
+        drawnow();
+        pause(0.01);
+end
+
+
+
 %%
 q = zeros(1, length(robot2.model.links));
 robot2.model.plot(q)
