@@ -5,6 +5,9 @@ classdef main
     properties
         % Properties
         robots = cell(1,2);
+        grip_ = cell(1,2);
+        grip_1;
+        grip_2;
         
         swordfile = {"model3D/Lightsaber2.ply", "model3D/Lightsaber2.ply"};
         baseRobot = {transl(0,0,0.5), transl(0,1,0.5)};
@@ -34,12 +37,18 @@ classdef main
                     {[-0.4 -0.5 0 pi/3 1 0 0], [-pi/4 pi/2.5 pi/2.2 pi/2 0 0]}
                     {[-0.4559 -0.5775 -1.2918 -0.1777 2.6849 -1.5708 2.1482], [-1.5708 2.1906 2.2471 0.7330 0.8378 1.5708]}
                     {[0 0.2797 -0.3640 0 -1.1375 1.5761 -1.8507], [-2.3562 2.2048 2.1457 0.7330 0.8378 2.3562]}
+
                     }
         % Preparepose{1} = [-0.4 0 0 0 0 0 -pi/2];
         % Preparepose{2} = [-pi/2 pi/2 -0 pi/3 0 0.5];
         
         % Object in the scence that are 3D models
         ObjectInTheScene=[];
+
+        BrickFile = 'HalfSizedRedGreenBrick.ply';
+        Grip1;
+        Grip2;
+        GripDegree = 45;
 
         advance = false;            % set advance to true if want to turn on GUI
     end
@@ -71,6 +80,11 @@ classdef main
             self.pose{1} = self.robots{1}.model.fkine(self.robots{1}.homeQ).T;
             self.pose{2} = self.robots{2}.model.fkine(self.robots{2}.homeQ).T;
 
+            %% Setup Gripper
+            % [R1grip_1, R1grip_2] = self.makeEndEffector();
+            % [R2grip_1, R2grip_2] = self.makeEndEffector();
+            % self.grip_{1} = [R1grip_1, R1grip_2];
+            % self.grip_{2} = [R2grip_1, R2grip_2];
             %% Execution 
             self.Execution();
             
@@ -120,6 +134,7 @@ classdef main
             % for i=1:length(Object)
             %     ObjectInTheScene{i} = get(Object{i}, 'Vertices');
             % end
+
             view(3);
             axis([-2 2 -2 3 0 4]);
             camlight;
@@ -178,13 +193,17 @@ classdef main
        
         %% This function is initial function for the robot to pickup swords and return the pose to prepare pose
         function collision = pickupSwordsStep(self, robots, locations, swords, swordVertices, steps)
-            collision = self.MoveRobotToLocation(robots, locations, [], swordVertices, steps);
+            collision = self.MoveRobotToLocation(robots, locations, [], swordVertices, steps, true);
             for i = 1:length(robots)
                 robot = robots{i};
                 sword = swords{i};
                 vertices = swordVertices{i};
                 self.MoveSwords(robot, sword, vertices);
                 pause(0.001);
+            end
+            for i=1:length(self.grip_)
+                gripper = self.grip_{i};
+                % self.closeEndEffector(gripper(1), gripper(2));
             end
         end
 
@@ -200,10 +219,11 @@ classdef main
         end
 
         %% Move the robot base on end-effector from 'location', update swords location and checking collision between robot parts itself.
-        function collision = MoveRobotToLocation(self, robots, locations, swords, swordVertices, steps, PassCollision)
-            
+        function collision = MoveRobotToLocation(self, robots, locations, swords, swordVertices, steps, PassCollision, GripOpen)
+            GripOpen = false;
             if nargin < 7			
-                PassCollision = true;				
+                PassCollision = true;		
+        		
             end
 
             qMatrix = cell(1, length(robots));
@@ -231,6 +251,9 @@ classdef main
                         display(qMatrix{i}(s,:));
                     end
                     self.MoveSwords(robot, sword, vertices);
+                    base_pose_endEffector = robot.model.fkine(robot.model.getpos);
+                    grip = self.grip_{i};
+                    % self.moveEndEffector(base_pose_endEffector.T, grip(1), grip(2), GripOpen);
                     pause(0.001);
                 end
 
@@ -695,140 +718,83 @@ classdef main
             try delete(check); end
         end
 
-        
+        %% Move end effector grippers
+        function moveEndEffector(self, base_pos, grip_1, grip_2, end_effector_open)
+            grip_1.base = base_pos*trotx(pi/2)*transl(0.035,0,0);
+            grip_2.base = base_pos*trotx(pi/2)*transl(-0.035,0,0);
+            % grip_1.base = grip_1_plot;
+            % grip_2.base = grip_2_plot;
+
+            if end_effector_open == true
+                q = [145*pi/180];
+            else
+                q = [pi/2];
+            end
+         
+            grip_1.animate(pi-q);                  % Plot the robot
+            grip_2.animate(q);
+        end
+         
+        %% Open end effector grippers
+        function openEndEffector(self, grip_1, grip_2)
+            for i = (pi/2):(pi/70):(145*pi/180)
+                grip_1.animate(pi-i);                  % Plot the robot
+                grip_2.animate(i);
+            end
+        end
+         
+        %% Close end effector grippers
+        function closeEndEffector(self, grip_1, grip_2)
+            for i = (145*pi/180):(-pi/70):(pi/2)
+                grip_1.animate(pi-i);                  % Plot the robot
+                grip_2.animate(i);
+            end
+        end
+        function [grip_1, grip_2] = makeEndEffector(self, name)
+            % Define DH parameters for gripper 1
+            L1 = Link('d',0, 'a', 0.04, 'alpha', 0, 'qlim',[0 pi/2]);
+            % % Define DH parameters for gripper 2
+            L2 = Link('d',0, 'a', 0.04, 'alpha', 0, 'qlim',[pi/2 pi]);
+            
+            grip_1 = SerialLink([L1], 'name', 'TwoGripperEndEffector');
+            grip_2 = SerialLink([L2], 'name', 'TwoGripperEnd');
+            
+            q = [pi/2];
+         
+            grip_1.plot(q);                  % Plot the robot
+            grip_2.plot(q);
+        end
 
 
-        
-        % function self = SetupEnvironment(self)
-        %     hold on;
-        %     PlaceObject('table_v1.ply', [-0.4,0,0]);
-        %     PlaceObject('table_v1.ply', [-0.4,1,0]);
-        %     view(3);
 
-        %     axis([-2 2 -2 2 0 3]);
+        %% Gripper //////////////////////////////////////////
+        % function obj = SetupGrip(obj)
+        %     obj.Grip1 = obj.DeleteObject(obj.Grip1);
+        %     obj.Grip2 = obj.DeleteObject(obj.Grip2);
+        %     obj.Grip1 = PlaceObject('Newhand.ply');
+        %     obj.Grip2 = PlaceObject('Newhand2.ply');
+        %     pose = obj.robot.model.fkine(obj.robot.model.getpos).T;
+        %     % need to set z of end-effector to have offset in z about 0.0859
+        %     obj.RotateObject(obj.Grip1, [0,0,0], pose * trotz(180, 'deg') * trotx(-obj.GripDegree, 'deg'));
+        %     obj.RotateObject(obj.Grip2, [0,0,0], pose * trotz(180, 'deg') * trotx(obj.GripDegree, 'deg'));
         % end
-        
-        % function self = setupSwords(self)
-        %     self.sword1 = self.DeleteObject(self.sword1);
-        %     self.sword2 = self.DeleteObject(self.sword2);
-
-        %     self.sword1 = PlaceObject(self.swordfile1);
-        %     self.sword2 = PlaceObject(self.swordfile2);
-
-        %     self.sword1_vertices = get(self.sword1, 'Vertices');
-        %     self.sword2_vertices  = get(self.sword2, 'Vertices');
-        %     % pose1 = self.robot1.model.fkine(self.robot1.model.getpos).T;
-        %     self.RotateObject(self.sword1, (transl(self.sword1StartLoc) * trotx(90, 'deg') ));
-        %     self.RotateObject(self.sword2, (transl(self.sword2StartLoc) * trotx(90, 'deg') ));
-
-        %     % self.sword1_vertices = get(self.sword1, 'Vertices');
-        %     % self.sword2_vertices  = get(self.sword2, 'Vertices');
-        %     % [minXYZ, maxXYZ] = getObjectMinMaxVertices(self, self.sword1);
+        % function obj = DeleteObject(obj)
+        %     try delete(obj); end
         % end
-        
-        % function self = pickupSwords(self, robot, location, object, objectVertic)
-        %     if length(location) == 3
-        %         location = transl(location) * troty(90, 'deg') * trotx(90, 'deg');
-        %     else
-        %         % location = location;
-        %     end
-        %     % location = transl(location) * troty(90, 'deg') * trotx(90, 'deg');
-        %     self.MoveRobotToLocation(robot, location, object, objectVertic);
-        % end
-        
-        % function [self, sword]= MoveSwords(self, robot, sword, sword_vertices)
-        %     if (isempty(sword)) 
-        %         return;  
-        %     end
-        %     robotPose = robot.model.fkine(robot.model.getpos).T * trotz(90, 'deg');
-        %     transformedVertices = [sword_vertices, ones(size(sword_vertices,1),1)] * robotPose';
-        %     set(sword,'Vertices',transformedVertices(:,1:3));
-        % end
-        
-        
-        % function self = MoveRobotToLocation(self, robot, location, object, objectVertic)
-        %     if length(location) == 3
-        %         MoveToObject = transl(location) * troty(-90,'deg');% * trotz(90,'deg');
-        %     else
-        %         MoveToObject = location;
-        %     end
-        %     initialGuess = robot.model.getpos;
-        %     try 
-        %         newQ1 = robot.model.ikine(MoveToObject, 'q0', initialGuess, 'forceSoln');
-        %     catch 
-        %         newQ1 = robot.model.ikcon(MoveToObject, initialGuess);
-        %     end
-        %     if isempty(newQ1)
-        %         newQ1 = robot.model.ikcon(MoveToObject, 'q0', initialGuess);
-        %     end 
-        %     qMatrix = jtraj(initialGuess,newQ1,self.steps);
-        %     for i = 1:length(qMatrix)
-        %         try 
-        %             robot.model.animate(qMatrix(i,:)); 
-        %         catch 
-        %             disp('Unable to move in this matrix : ')
-        %             display(qMatrix(i,:))
-        %         end
-        %         [self, object] = self.MoveSwords(robot, object, objectVertic)
-        %         pause(0.001);
-               
-        %     end
-        % end
-
-        % function self = DeleteObject(self, object)
-        %     try 
-        %         delete(object); 
-        %     end
-        % end
-        % function RotateObject(self, object, transformMatrix)
+        % function RotateObject (obj,location, degree)
+        %     % Define the rotation angle in degrees (e.g., 180 degrees)
+        %     rotationAngleDegrees = degree;
+        %     % Create a homogeneous transformation matrix for rotation
+        %     rotationMatrix = transl(location) * rotationAngleDegrees;            
         %     % Get the object's vertices
-        %     vertices = get(object, 'Vertices');
+        %     vertices = get(obj, 'Vertices');
         %     % Apply the rotation transformation to the object's vertices
-        %     transformedVertices = (transformMatrix * [vertices, ones(size(vertices, 1), 1)]')';
+        %     transformedVertices = (rotationMatrix * [vertices, ones(size(vertices, 1), 1)]')';
         %     % Update the object's vertices with the rotated vertices
-        %     set(object, 'Vertices', transformedVertices(:, 1:3));
-        % end
-
-        % function MoveObject(object, rotationMatrix, rotationCenter)
-        %     % Get the object's vertices
-        %     vertices = get(object, 'Vertices');
-            
-        %     % Translate vertices to origin based on rotation center
-        %     vertices = vertices - repmat(rotationCenter, size(vertices, 1), 1);
-            
-        %     % Rotate the vertices
-        %     rotatedVertices = (rotationMatrix * vertices')';
-            
-        %     % Translate back to original location
-        %     rotatedVertices = rotatedVertices + repmat(rotationCenter, size(vertices, 1), 1);
-            
-        %     % Update the object's vertices
-        %     set(object, 'Vertices', rotatedVertices);
+        %     set(obj, 'Vertices', transformedVertices(:, 1:3));
         % end
 
 
-        % function [minXYZ, maxXYZ] = getObjectMinMaxVertices(self, object)
-        %     % Extracting the vertices of the object
-        %     vertices = get(object, 'Vertices');
-            
-        %     % Finding the min and max points along each axis
-        %     minX = min(vertices(:, 1));
-        %     minY = min(vertices(:, 2));
-        %     minZ = min(vertices(:, 3));
-            
-        %     maxX = max(vertices(:, 1));
-        %     maxY = max(vertices(:, 2));
-        %     maxZ = max(vertices(:, 3));
-            
-        %     minXYZ = [minX, minY, minZ];
-        %     maxXYZ = [maxX, maxY, maxZ];
-            
-        %     % Displaying the results
-        %     % fprintf('Min XYZ: [%f, %f, %f]\n', minXYZ);
-        %     % fprintf('Max XYZ: [%f, %f, %f]\n', maxXYZ);
-        % end
-        
-        
     end
 end
 
