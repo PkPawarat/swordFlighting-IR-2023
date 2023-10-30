@@ -29,6 +29,12 @@ classdef main
         %% ****************************** Prepare to fight pose need to be hard code but it need to be adjust later on *********************************************
         Preparepose = {[-0.4 0 0 0 0 0 -pi/2], [-pi/2 pi/2 1.3 0 0 0.26]};
         Testose = {[-0.4 0 0 0 0 0 -0.5], deg2rad([-130 61 60 0 6 90])};
+
+        DemoPose = {{[-0.4 0 0 0 0 0 -0.5], deg2rad([-130 61 60 0 6 90])}  
+                    {[-0.4 -0.5 0 pi/3 1 0 0], [-pi/4 pi/2.5 pi/2.2 pi/2 0 0]}
+                    {[-0.4559 -0.5775 -1.2918 -0.1777 2.6849 -1.5708 2.1482], [-1.5708 2.1906 2.2471 0.7330 0.8378 1.5708]}
+                    {[0 0.2797 -0.3640 0 -1.1375 1.5761 -1.8507], [-2.3562 2.2048 2.1457 0.7330 0.8378 2.3562]}
+                    }
         % Preparepose{1} = [-0.4 0 0 0 0 0 -pi/2];
         % Preparepose{2} = [-pi/2 pi/2 -0 pi/3 0 0.5];
         
@@ -46,19 +52,14 @@ classdef main
             hold on;
             axis([-3 3 -3 3 0 3]);
             camlight;
-    
+            
+            %% Setup Swords
             [self.swords{1}, self.sword_vertices{1}, self.swords{2}, self.sword_vertices{2}] = self.setupSwords(self.swordfile{1}, self.swordfile{2}, self.swordStartLoc{1}, self.swordStartLoc{2});
-
             %% Setup Robots
             self.robots{1} = self.SetupRobot(self.baseRobot{1}, false);
             self.robots{2} = self.SetupRobot(self.baseRobot{2}, true);
-
             %% Setup Ellipsoid
-            self.robots = self.SetupEllipsoid(self.robots);
-
-            % self.links{1} = self.UpdateEachLink(self.robots{1});
-            % self.links{2} = self.UpdateEachLink(self.robots{2});
-            
+            self.robots = self.SetupEllipsoid(self.robots);            
             %% Setup Environment
             self.ObjectInTheScene = self.SetupEnvironment();
             [objectVertices] = self.UpdateObjectsVertices(self.ObjectInTheScene);
@@ -72,38 +73,6 @@ classdef main
 
             %% Execution 
             self.Execution();
-
-            %% 
-            % self.pickupSwordsStep(self.robots, self.swordStartLoc, self.swords, self.sword_vertices, self.steps);
-            % self.PreparePoses(self.robots, self.Preparepose, self.swords, self.sword_vertices, self.steps);
-            %% 
-            % self.MoveRobotToLocation(self.robots, self.Testose, self.swords, self.sword_vertices, self.steps);
-
-            %% CHECK COLLISION
-            collision = false;%self.MoveRobotToLocation(self.robots, self.pose1, self.swords, self.sword_vertices, self.steps);
-            if collision
-                str = input('Type "y" to move each robot back to original\n Or "n" to cancle program: ', 's');
-                switch str
-                    case 'y'
-                        % Code to move each robot back to its original position
-                        disp('Moving robots back to original position...');
-                        home = {self.robots{1}.model.fkine(self.robots{1}.homeQ), self.robots{2}.model.fkine(self.robots{2}.homeQ)};
-                        self.MoveRobotToLocation(self.robots, home, self.swords, self.sword_vertices, self.steps, false);
-                    case 'n'
-                        disp('Cancelling program...');
-                        return; % This will exit the script or function
-                    otherwise
-                        disp('Invalid input. Please type "y" or "n".');
-                end
-            end
-
-            collisionDetected = self.CheckCollision(self.robots{1}, self.robots{2});
-
-            if collisionDetected
-                disp('Collision detected!');
-            else
-                disp('No collision detected.');
-            end
             
         end
 
@@ -112,10 +81,11 @@ classdef main
             self.pickupSwordsStep(self.robots, self.swordStartLoc, self.swords, self.sword_vertices, self.steps);
             % Prepare the to fight 
             self.PreparePoses(self.robots, self.Preparepose, self.swords, self.sword_vertices, self.steps);
-            
             % Start random pose to fighting
-            for i = 1:10
-                self.MoveRobotToLocation(self.robots, self.Testose, self.swords, self.sword_vertices, self.steps);
+            for i = 1:length(self.DemoPose)
+                Pose = self.DemoPose{i};
+                self.MoveRobotToLocation(self.robots, Pose, self.swords, self.sword_vertices, self.steps);
+                self.PreparePoses(self.robots, self.Preparepose, self.swords, self.sword_vertices, self.steps);
             end
            
         end
@@ -198,9 +168,9 @@ classdef main
             max2 = max(vertices2);
         
             % Check for overlap in each dimension
-            overlapX = (min1(1) <= max2(1)) && (max1(1) >= min2(1));
-            overlapY = (min1(2) <= max2(2)) && (max1(2) >= min2(2));
-            overlapZ = (min1(3) <= max2(3)) && (max1(3) >= min2(3));
+            overlapX = (min1(1) < max2(1)) && (max1(1) > min2(1));
+            overlapY = (min1(2) < max2(2)) && (max1(2) > min2(2));
+            overlapZ = (min1(3) < max2(3)) && (max1(3) > min2(3));
         
             % If there is overlap in all three dimensions, the objects are colliding
             isColliding = overlapX && overlapY && overlapZ;
@@ -219,7 +189,7 @@ classdef main
         end
 
         function collision = PreparePoses(self, robots, locations, swords, swordVertices, steps)
-            collision = self.MoveRobotToLocation(robots, locations, swords, swordVertices, steps);
+            self.MoveRobotToLocation(robots, locations, swords, swordVertices, steps, false);
             for i = 1:length(robots)
                 robot = robots{i};
                 sword = swords{i};
@@ -265,27 +235,24 @@ classdef main
                 end
 
                 %% this may need to be in the CheckCollision ////////////////////////////////////////////////////////
-
-                [self.sword_vertices] = self.UpdateObjectsVertices(self.swords);
-                isColliding = self.checkObjectsCollision(self.sword_vertices{1}, self.sword_vertices{2});
-                if isColliding
-                    disp('Swords collide')
-                    return;
-                end
-                % poses1 = self.GetLinkPoses(robot1.model.getpos, robot1.model);
-                % [point1, radiis, ellipsoidCenters] = self.UpdateEllipsoid(robot1, poses1);
-                % [object_vertices] = self.UpdateObjectsVertices(self.ObjectInTheScene);
-                % 
-                % isColliding = self.checkObjectsCollision(object_vertices{1}, object_vertices{2});
-                % if isColliding
-                %     disp('Objects collide')
-                %     return;
-                % end
-                collision = self.CheckCollision(robots{1}, robots{2});
-                if collision && PassCollision
-                    % if the robot part is collition stop the robot immediately
-                    disp('STOP All systems, the robot parts have collide.')
-                    return;
+                if PassCollision
+                    [self.sword_vertices] = self.UpdateObjectsVertices(self.swords);
+                    isColliding = self.checkObjectsCollision(self.sword_vertices{1}, self.sword_vertices{2});
+                    if isColliding
+                        collision = true;
+                        disp('Swords collide')
+                        return;
+                    end
+    
+                    [collision,swordCollide] = self.CheckCollision(robots{1}, robots{2}, self.sword_vertices);
+                    if collision
+                        % if the robot part is collition stop the robot immediately
+                        disp('STOP All systems, the robot parts have collide.')
+                        return;
+                    elseif swordCollide
+                        disp('Swords collide with robot')
+                        return;
+                    end
                 end
                 %% ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
             end
@@ -303,6 +270,7 @@ classdef main
                 
                 initialGuess = robot.model.getpos;
                 try 
+                    newQ1 = [];
                     newQ1 = robot.model.ikine(MoveToObject, 'q0', initialGuess, 'forceSoln');
                 catch 
                     newQ1 = robot.model.ikcon(MoveToObject, initialGuess);
@@ -405,54 +373,66 @@ classdef main
 
         function [points, radiis, ellipsoidCenters] = UpdateEllipsoid(self, robot, tr)
             links = robot.model.links;
-            numLinks = robot.model.n+1;
-            points = cell(1,numLinks);
-            radiis = cell(1,numLinks);
-            ellipsoidCenters = cell(1,numLinks);
-            
+            numLinks = robot.model.n + 1;
+            points = cell(1, numLinks);
+            radiis = cell(1, numLinks);
+            ellipsoidCenters = cell(1, numLinks);
+            sizeRadii = 0.05;
+            h = cell(1, numLinks); % Cell array to store plot handles
+        
             for i = 2:numLinks  % Start from the second link
-                a = robot.model.links(i-1).a;
-                d = robot.model.links(i-1).d;
-                
+                a = robot.model.links(i - 1).a;
+                d = robot.model.links(i - 1).d;
+        
                 % Compute the distance for ellipsoid size
                 distanceFromXYZ = sqrt(a^2 + d^2);
-                
+        
                 % Handle the case where distanceFromXYZ is 0
                 if distanceFromXYZ == 0
                     distanceFromXYZ = 0.1; % Set a minimum value or adjust as needed
                 end
+        
                 if a ~= 0
-                    radii = [-distanceFromXYZ/2, 0.2, 0.2];
-                    ellipsoidCenter = [-distanceFromXYZ/2, 0, 0];
+                    radii = [-distanceFromXYZ / 2, sizeRadii, sizeRadii];
+                    ellipsoidCenter = [-distanceFromXYZ / 2, 0, 0];
                 else
-                    radii = [0.2, -distanceFromXYZ/2, 0.2];
-                    ellipsoidCenter = [0, -distanceFromXYZ/2, 0];
+                    radii = [sizeRadii, -distanceFromXYZ / 2, sizeRadii];
+                    ellipsoidCenter = [0, -distanceFromXYZ / 2, 0];
                 end        
                 radiis{i} = radii;
                 ellipsoidCenters{i} = ellipsoidCenter;
-
+        
                 % Extract the rotation matrix and translation vector for the current link
                 rotation = tr(1:3, 1:3, i);
                 translation = tr(1:3, 4, i);
-                
+        
                 % Create the ellipsoid in its local frame
-                [X,Y,Z] = ellipsoid(ellipsoidCenter(1), ellipsoidCenter(2), ellipsoidCenter(3), radii(1), radii(2), radii(3));
-                
-                % Rotate the ellipsoid points
+                [X, Y, Z] = ellipsoid(ellipsoidCenter(1), ellipsoidCenter(2), ellipsoidCenter(3), radii(1), radii(2), radii(3));
+        
+                % Rotate and translate the ellipsoid points
                 rotatedPoints = rotation * [X(:)'; Y(:)'; Z(:)'];
-                
-                % Translate the rotated points
                 translatedPoints = bsxfun(@plus, rotatedPoints, translation);
-                
+        
                 % Store the points
                 points{i} = translatedPoints';
-                
+        
                 % Visualize the ellipsoid
-                % surf(reshape(translatedPoints(1,:), size(X)), ...
-                %      reshape(translatedPoints(2,:), size(Y)), ...
-                %      reshape(translatedPoints(3,:), size(Z)));
+                % h{i} = surf(reshape(translatedPoints(1, :), size(X)), ...
+                %             reshape(translatedPoints(2, :), size(Y)), ...
+                %             reshape(translatedPoints(3, :), size(Z)));
             end
+        
+            % % Wait for 0.1 seconds after plotting all ellipsoids
+            % pause(0.1);
+            % 
+            % % Delete all the surface plots
+            % for i = 2:numLinks
+            %     if isgraphics(h{i})
+            %         delete(h{i});
+            %     end
+            % end
         end
+
 
         %% GetLinkPoses
         % q - robot joint angles
@@ -480,19 +460,21 @@ classdef main
             end
         end
 
-        function collision = CheckCollision(self, robot1, robot2)
+        function [collision,swordCollide] = CheckCollision(self, robot1, robot2, sword_vertices)
             collision = false;
+            swordCollide = false;
             poses1 = self.GetLinkPoses(robot1.model.getpos, robot1.model);
             poses2 = self.GetLinkPoses(robot2.model.getpos, robot2.model);
             
             [point1, radiis, ellipsoidCenters] = self.UpdateEllipsoid(robot1, poses1);
             [point2, radiis, ellipsoidCenters] = self.UpdateEllipsoid(robot2, poses2);
-        
+            
+            sizeRadii=0.05;
             % check collision between two robot
             for i = 2: size(poses1,3)
                 for k = 2: size(point2,2)
                     distanceFromXYZ = robot1.model.links(i-1).a';
-                    radii = [distanceFromXYZ/1.5, 0.2, 0.2];
+                    radii = [distanceFromXYZ/1.5, sizeRadii, sizeRadii];
         
                     cubePointsAndOnes = [inv(poses1(:,:,i)) * [point2{k},ones(size(point2{k},1),1)]']';
                     updatedCubePoints = cubePointsAndOnes(:,1:3);
@@ -505,27 +487,39 @@ classdef main
                         collision = true;
                         return;
                     end
+
+                    swordCollide = self.checkObjectsCollision(sword_vertices{1}, point2{k});
+                    if swordCollide
+                        disp('Sword 1 attacked robot 2')
+                        return
+                    end
                 end
             end
+            for i = 2: size(poses2,3)
+                for k = 2: size(point1,2)
+                    % distanceFromXYZ = robot1.model.links(i-1).a';
+                    % radii = [distanceFromXYZ/1.5, 0.2, 0.2];
+                    % 
+                    % cubePointsAndOnes = [inv(poses1(:,:,i)) * [point2{k},ones(size(point2{k},1),1)]']';
+                    % updatedCubePoints = cubePointsAndOnes(:,1:3);
+                    % % base = robot1.model.base.T;
+                    % base = poses1(:,:,2);
+                    % algebraicDist = self.GetAlgebraicDist(updatedCubePoints, base(1:3,4)', radii);
+                    % pointsInside = find(algebraicDist < 1);
+                    % if length(pointsInside) > 5
+                    %     disp(['Base on robot1 There are ', num2str(size(pointsInside,1)),' tr inside the ',num2str(i), ' points inside the ',num2str(k), ' th ellipsoid']);
+                    %     collision = true;
+                    %     return;
+                    % end
 
-            % % check collision between two robot
-            % for i = 2: size(poses2,3)
-            %     for k = 2: size(point1,2)
-            %         distanceFromXYZ = robot2.model.links(i-1).a';
-            %         radii = [distanceFromXYZ/1.5, 0.3, 0.3];
-            % 
-            %         cubePointsAndOnes = [inv(poses2(:,:,i)) * [point1{k},ones(size(point1{k},1),1)]']';
-            %         updatedCubePoints = cubePointsAndOnes(:,1:3);
-            %         base = robot2.model.base.T;
-            %         algebraicDist = self.GetAlgebraicDist(updatedCubePoints, base(1:3,4)', radii);
-            %         pointsInside = find(algebraicDist < 1);
-            %         if length(pointsInside) > 0
-            %             disp(['Base on robot2 There are ', num2str(size(pointsInside,1)),' tr inside the ',num2str(i), ' points inside the ',num2str(k), ' th ellipsoid']);
-            %             collision = true;
-            %             return;
-            %         end
-            %     end
-            % end
+                    swordCollide = self.checkObjectsCollision(sword_vertices{2}, point1{k});
+                    if swordCollide
+                        disp('Sword 2 attacked robot 1')
+                        return
+                    end
+                end
+            end
+            
         end
 
         %% function 
