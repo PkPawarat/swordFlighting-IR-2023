@@ -30,8 +30,8 @@ classdef FanucM20 < RobotBaseClass
         
         % Incorporate joint limits
         link(1).qlim = [-180 180]*pi/180;
-        link(2).qlim = [-100 160]*pi/180;
-        link(3).qlim = [-125 125]*pi/180;
+        link(2).qlim = [-90 90]*pi/180;
+        link(3).qlim = [-125 90]*pi/180;
         link(4).qlim = [-225 50]*pi/180;
         link(5).qlim = [-180 180]*pi/180;
         link(6).qlim = [-450 450]*pi/180;
