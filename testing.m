@@ -7,7 +7,7 @@ robot2 = babyYODA(transl(0,2,0.5));
 %%
 clf
 % close all
-
+hold on
 r = FanucM20;
 r.model.teach();
 axis([-2 2 -2 2 0 3])
