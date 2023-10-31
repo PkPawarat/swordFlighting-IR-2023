@@ -1,5 +1,5 @@
 rosshutdown;
-rosinit('192.168.27.1'); % If unsure, please ask a tutor
+rosinit('192.168.0.1'); % If unsure, please ask a tutor
 jointStateSubscriber = rossubscriber('joint_states','sensor_msgs/JointState');
 
 pose_1 = [-0.4 0 0 0 0 0 -pi/2];

@@ -5,16 +5,12 @@ classdef main
     properties
         % Properties
         robots = cell(1,2);
-        swordStartLoc = cell(1,2);
-        swordfile = cell(1,2);
-        baseRobot = cell(1,2);
         
-        % swordStartLoc{1} = [-0.4 -0.5 0.5];
-        % swordStartLoc{2} = [-0.4 1.55 0.5];
-        % swordfile{1} = "model3D/Lightsaber2.ply";
-        % swordfile{2} = "model3D/Lightsaber2.ply";
-        % baseRobot{1} = transl(0,0,0.5);
-        % baseRobot{2} = transl(0,1,0.5);
+        swordfile = {"model3D/Lightsaber2.ply", "model3D/Lightsaber2.ply"};
+        baseRobot = {transl(0,0,0.5), transl(0,1,0.5)};
+        
+        swordStartLoc = {[-0.4 -0.5 0.5], [-0.4 1.55 0.5]};
+        
         steps = 50;
 
         % setup each link
@@ -22,10 +18,8 @@ classdef main
 
         % Setup robot pose
         pose = cell(1,2);
-        pose1 = cell(1,2);
+        pose1 = {transl([0 1 1]) * troty(0, 'deg'), transl([0 0 1]) * trotz(0, 'deg')};
         pose2 = cell(1,2);
-        % pose1{1} = transl([0 1 1]) * troty(0, 'deg');
-        % pose1{2} = transl([0 0 1]) * trotz(0, 'deg');
 
         % Setup Swords
         swords = cell(1,2);
@@ -33,7 +27,8 @@ classdef main
         
         
         %% ****************************** Prepare to fight pose need to be hard code but it need to be adjust later on *********************************************
-        Preparepose = cell(1,2);
+        Preparepose = {[-0.4 0 0 0 0 0 -pi/2], [-pi/2 pi/2 1.3 0 0 0.26]};
+        Testose = {[-0.4 0 0 0 0 0 -0.5], deg2rad([-130 61 60 0 6 90])};
         % Preparepose{1} = [-0.4 0 0 0 0 0 -pi/2];
         % Preparepose{2} = [-pi/2 pi/2 -0 pi/3 0 0.5];
         
@@ -51,45 +46,41 @@ classdef main
             hold on;
             axis([-3 3 -3 3 0 3]);
             camlight;
-
-            self.swordStartLoc{1} = [-0.4 -0.5 0.5];
-            self.swordStartLoc{2} = [-0.4 1.55 0.5];
-            self.swordfile{1} = "model3D/Lightsaber2.ply";
-            self.swordfile{2} = "model3D/Lightsaber2.ply";
-            self.baseRobot{1} = transl(0,0,0.5);
-            self.baseRobot{2} = transl(0,1,0.5);
-
-            self.pose1{1} = transl([0 1 1]) * troty(0, 'deg');
-            self.pose1{2} = transl([0 0 1]) * trotz(0, 'deg');
-
-            self.Preparepose{1} = [-0.4 0 0 0 0 0 -pi/2];
-            self.Preparepose{2} = [-pi/2 pi/2 -0 pi/3 0 0.5];
-
+    
             [self.swords{1}, self.sword_vertices{1}, self.swords{2}, self.sword_vertices{2}] = self.setupSwords(self.swordfile{1}, self.swordfile{2}, self.swordStartLoc{1}, self.swordStartLoc{2});
 
-            % Setup Robots
+            %% Setup Robots
             self.robots{1} = self.SetupRobot(self.baseRobot{1}, false);
             self.robots{2} = self.SetupRobot(self.baseRobot{2}, true);
 
-            % Setup Ellipsoid
+            %% Setup Ellipsoid
             self.robots = self.SetupEllipsoid(self.robots);
 
-            self.links{1} = self.UpdateEachLink(self.robots{1});
-            self.links{2} = self.UpdateEachLink(self.robots{2});
-            % Setup Environment
-            self.ObjectInTheScene = self.setupEnvironment();
-
-
+            % self.links{1} = self.UpdateEachLink(self.robots{1});
+            % self.links{2} = self.UpdateEachLink(self.robots{2});
+            
+            %% Setup Environment
+            self.ObjectInTheScene = self.SetupEnvironment();
+            [objectVertices] = self.UpdateObjectsVertices(self.ObjectInTheScene);
+            %% plot bounding box
+            % self.plotBoundingBox(objectVertices{1});
+            % self.plotBoundingBox(objectVertices{2});
+            %% Set home pose 
             self.pose = cell(1,2);
             self.pose{1} = self.robots{1}.model.fkine(self.robots{1}.homeQ).T;
             self.pose{2} = self.robots{2}.model.fkine(self.robots{2}.homeQ).T;
 
-            %% Interleave the operations of robot1 and robot2
-            self.pickupSwordsStep(self.robots, self.swordStartLoc, self.swords, self.sword_vertices, self.steps);
-            %%
-            self.PreparePoses(self.robots, self.Preparepose, self.swords, self.sword_vertices, self.steps);
-            %%
-            collision = self.MoveRobotToLocation(self.robots, self.pose1, self.swords, self.sword_vertices, self.steps);
+            %% Execution 
+            self.Execution();
+
+            %% 
+            % self.pickupSwordsStep(self.robots, self.swordStartLoc, self.swords, self.sword_vertices, self.steps);
+            % self.PreparePoses(self.robots, self.Preparepose, self.swords, self.sword_vertices, self.steps);
+            %% 
+            % self.MoveRobotToLocation(self.robots, self.Testose, self.swords, self.sword_vertices, self.steps);
+
+            %% CHECK COLLISION
+            collision = false;%self.MoveRobotToLocation(self.robots, self.pose1, self.swords, self.sword_vertices, self.steps);
             if collision
                 str = input('Type "y" to move each robot back to original\n Or "n" to cancle program: ', 's');
                 switch str
@@ -114,58 +105,19 @@ classdef main
                 disp('No collision detected.');
             end
             
-
-
-
-
-
-            % self = self.SetupRobots();
-            
-            % self.setupEnvironment();
-            % self = self.setupSwords();
-            
-            % pose1 = self.robot1.model.fkine(self.robot1.homeQ).T;
-            % pose2 = self.robot2.model.fkine(self.robot2.homeQ).T;
-
-            % % Initialize parallel pool
-            % poolobj = gcp('nocreate'); % If no pool, do not create new one.
-            % if isempty(poolobj)
-            %     parpool('local');
-            % end
-    
-            % % Use parfor for parallel execution
-            % parfor idx = 1:2
-            %     if idx == 1
-            %         self.pickupSwords(self.robot1, self.sword1StartLoc, [], self.swordfile1);
-            %         self.MoveRobotToLocation(self.robot1, pose1, self.sword1, self.sword1_vertices);
-            %     else
-            %         self.pickupSwords(self.robot2, self.sword2StartLoc, [], self.swordfile2);
-            %         self.MoveRobotToLocation(self.robot2, pose2, self.sword2, self.sword2_vertices);
-            %     end
-            % end
-            % % self = self.pickupSwords(self.robot1, self.sword1StartLoc, [], self.swordfile1);
-            % % self.MoveRobotToLocation(self.robot1, pose1, self.sword1, self.sword1_vertices) ;
-            % % 
-            % % self = self.pickupSwords(self.robot2, self.sword2StartLoc, [], self.swordfile2);
-            % % self.MoveRobotToLocation(self.robot2, pose2, self.sword2, self.sword2_vertices) ;
-
-            % % q = self.robot2.model.ikine(q, self.robot2.model.getpos, 'mask', [1,1,1,1,1,0])
         end
 
-        function execution(self)
+        function Execution(self)
             % pickup the sword
-
-            % prepare the to fight 
-
-            % run in the loop 
-                % start fighting the robot
-                % check health of each robot 
-                % show status health message
-                
-                % if health is == 0 then exit the loop and show vitory message
-
-            % return the sword to original position
-            % return to original position of the robot
+            self.pickupSwordsStep(self.robots, self.swordStartLoc, self.swords, self.sword_vertices, self.steps);
+            % Prepare the to fight 
+            self.PreparePoses(self.robots, self.Preparepose, self.swords, self.sword_vertices, self.steps);
+            
+            % Start random pose to fighting
+            for i = 1:10
+                self.MoveRobotToLocation(self.robots, self.Testose, self.swords, self.sword_vertices, self.steps);
+            end
+           
         end
 
         %% Setup Robot parts and robot base
@@ -187,22 +139,36 @@ classdef main
         end
 
         %% Setup Environment of the scene 
-        function ObjectInTheScene = setupEnvironment(self)
+        function Object = SetupEnvironment(self)
             hold on;
             
             Object{1} = PlaceObject('table_v1.ply', [-0.4,0,0]); % Assuming PlaceObject is a function or another script
             Object{2} = PlaceObject('table_v1.ply', [-0.4,1,0]);
 
-            ObjectInTheScene = cell(size(Object));
-            % Assign Vertices for object 
-            for i=1:size(Object)
-                ObjectInTheScene{i} = get(Object{i}, 'Vertices');
-            end
+            % ObjectInTheScene = cell(size(Object));
+            % % Assign Vertices for object 
+            % for i=1:length(Object)
+            %     ObjectInTheScene{i} = get(Object{i}, 'Vertices');
+            % end
             view(3);
-            axis([-2 2 -1 2 0 2.5]);
+            axis([-2 2 -2 3 0 4]);
             camlight;
         end
-
+        
+        %% Plot bounding box
+        function plotBoundingBox(self,vertices)
+            minV = min(vertices);
+            maxV = max(vertices);
+            for i = 1:3
+                range{i} = linspace(minV(i), maxV(i), 2);
+            end
+            [X, Y, Z] = meshgrid(range{:});
+            X = X(:);
+            Y = Y(:);
+            Z = Z(:);
+            plot3(X, Y, Z, 'ro'); % Plot corners of the bounding box
+            hold on;
+        end
         %% Setup Swords location base on hardcode location
         function [sword1, sword1_vertices, sword2, sword2_vertices] = setupSwords(self, swordfile1, swordfile2, sword1StartLoc, sword2StartLoc)
             sword1 = PlaceObject(swordfile1);
@@ -212,7 +178,34 @@ classdef main
             self.RotateObject(sword1, (transl(sword1StartLoc) * trotx(90, 'deg')));
             self.RotateObject(sword2, (transl(sword2StartLoc) * trotx(90, 'deg')));
         end
-
+      
+        %% Update Swords location 
+        function [sword_vertices] = UpdateObjectsVertices(self, objects)
+            sword_vertices = cell(1,length(objects));
+            for i=1:length(objects)
+                sword_vertices{i} = get(objects{i}, 'Vertices');
+            end
+            % sword2_vertices = get(sword2, 'Vertices');
+            % sword_vertices = {sword1_vertices, sword2_vertices};
+        end
+       
+        %% Check collision of swords
+        function isColliding = checkObjectsCollision(self, vertices1, vertices2)
+            % Calculate the bounding box for each set of vertices
+            min1 = min(vertices1);
+            max1 = max(vertices1);
+            min2 = min(vertices2);
+            max2 = max(vertices2);
+        
+            % Check for overlap in each dimension
+            overlapX = (min1(1) <= max2(1)) && (max1(1) >= min2(1));
+            overlapY = (min1(2) <= max2(2)) && (max1(2) >= min2(2));
+            overlapZ = (min1(3) <= max2(3)) && (max1(3) >= min2(3));
+        
+            % If there is overlap in all three dimensions, the objects are colliding
+            isColliding = overlapX && overlapY && overlapZ;
+        end
+       
         %% This function is initial function for the robot to pickup swords and return the pose to prepare pose
         function collision = pickupSwordsStep(self, robots, locations, swords, swordVertices, steps)
             collision = self.MoveRobotToLocation(robots, locations, [], swordVertices, steps);
@@ -271,12 +264,30 @@ classdef main
                     pause(0.001);
                 end
 
+                %% this may need to be in the CheckCollision ////////////////////////////////////////////////////////
+
+                [self.sword_vertices] = self.UpdateObjectsVertices(self.swords);
+                isColliding = self.checkObjectsCollision(self.sword_vertices{1}, self.sword_vertices{2});
+                if isColliding
+                    disp('Swords collide')
+                    return;
+                end
+                % poses1 = self.GetLinkPoses(robot1.model.getpos, robot1.model);
+                % [point1, radiis, ellipsoidCenters] = self.UpdateEllipsoid(robot1, poses1);
+                % [object_vertices] = self.UpdateObjectsVertices(self.ObjectInTheScene);
+                % 
+                % isColliding = self.checkObjectsCollision(object_vertices{1}, object_vertices{2});
+                % if isColliding
+                %     disp('Objects collide')
+                %     return;
+                % end
                 collision = self.CheckCollision(robots{1}, robots{2});
                 if collision && PassCollision
                     % if the robot part is collition stop the robot immediately
                     disp('STOP All systems, the robot parts have collide.')
                     return;
                 end
+                %% ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
             end
         end
 
@@ -356,6 +367,26 @@ classdef main
                     % Use the computed distance to determine the radii of the ellipsoid
                     radii = [distanceFromXYZ/1.2, 0.1, 0.1];  % Adjust as needed
                     center = [-distanceFromXYZ/2 0 0];
+
+
+                    a = robot.model.links(k-1).a;
+                    d = robot.model.links(k-1).d;
+                    
+                    % Compute the distance for ellipsoid size
+                    distanceFromXYZ = sqrt(a^2 + d^2);
+                    
+                    % Handle the case where distanceFromXYZ is 0
+                    if distanceFromXYZ == 0
+                        distanceFromXYZ = 0.1; % Set a minimum value or adjust as needed
+                    end
+                    if a ~= 0
+                        radii = [-distanceFromXYZ/2, 0.2, 0.2];
+                        center = [-distanceFromXYZ/2, 0, 0];
+                    else
+                        radii = [0.2, -distanceFromXYZ/2, 0.2];
+                        center = [0, -distanceFromXYZ/2, 0];
+                    end
+
                     [X,Y,Z] = ellipsoid(center(1), center(2), center(3), radii(1), radii(2), radii(3));
                     robot.model.points{k} = [X(:),Y(:),Z(:)];
                     warning off
@@ -364,13 +395,21 @@ classdef main
                 end
                 robots{i} = robot;
             end
+            % workspace_limits = [-2 3 -1 2 -0 3]; % Example limits, adjust as needed
+            % robots{1}.model.plot3d(robots{1}.model.getpos, 'workspace', workspace_limits);
+            % robots{2}.model.plot3d(robots{2}.model.getpos, 'workspace', workspace_limits);
+            % axis(workspace_limits);
+            % view(3)
+
         end
 
-        function points = UpdateEllipsoid(self, robot, tr)
+        function [points, radiis, ellipsoidCenters] = UpdateEllipsoid(self, robot, tr)
             links = robot.model.links;
             numLinks = robot.model.n+1;
             points = cell(1,numLinks);
-        
+            radiis = cell(1,numLinks);
+            ellipsoidCenters = cell(1,numLinks);
+            
             for i = 2:numLinks  % Start from the second link
                 a = robot.model.links(i-1).a;
                 d = robot.model.links(i-1).d;
@@ -389,10 +428,13 @@ classdef main
                     radii = [0.2, -distanceFromXYZ/2, 0.2];
                     ellipsoidCenter = [0, -distanceFromXYZ/2, 0];
                 end        
+                radiis{i} = radii;
+                ellipsoidCenters{i} = ellipsoidCenter;
+
                 % Extract the rotation matrix and translation vector for the current link
                 rotation = tr(1:3, 1:3, i);
                 translation = tr(1:3, 4, i);
-        
+                
                 % Create the ellipsoid in its local frame
                 [X,Y,Z] = ellipsoid(ellipsoidCenter(1), ellipsoidCenter(2), ellipsoidCenter(3), radii(1), radii(2), radii(3));
                 
@@ -443,18 +485,19 @@ classdef main
             poses1 = self.GetLinkPoses(robot1.model.getpos, robot1.model);
             poses2 = self.GetLinkPoses(robot2.model.getpos, robot2.model);
             
-            point1 = self.UpdateEllipsoid(robot1, poses1);
-            point2 = self.UpdateEllipsoid(robot2, poses2);
+            [point1, radiis, ellipsoidCenters] = self.UpdateEllipsoid(robot1, poses1);
+            [point2, radiis, ellipsoidCenters] = self.UpdateEllipsoid(robot2, poses2);
         
             % check collision between two robot
             for i = 2: size(poses1,3)
                 for k = 2: size(point2,2)
                     distanceFromXYZ = robot1.model.links(i-1).a';
-                    radii = [distanceFromXYZ/1.5, 0.3, 0.3];
+                    radii = [distanceFromXYZ/1.5, 0.2, 0.2];
         
                     cubePointsAndOnes = [inv(poses1(:,:,i)) * [point2{k},ones(size(point2{k},1),1)]']';
                     updatedCubePoints = cubePointsAndOnes(:,1:3);
-                    base = robot1.model.base.T;
+                    % base = robot1.model.base.T;
+                    base = poses1(:,:,2);
                     algebraicDist = self.GetAlgebraicDist(updatedCubePoints, base(1:3,4)', radii);
                     pointsInside = find(algebraicDist < 1);
                     if length(pointsInside) > 5
@@ -496,11 +539,173 @@ classdef main
             end
         end
 
+        function CalculateAllPossiblePosition(robot)
+            stepRads = deg2rad(30);
+            qlim = robot.model.qlim;
+            % Don't need to worry about joint 7
+            pointCloudeSize = prod(floor((qlim(1:6,2)-qlim(1:6,1))/stepRads + 1));
+            pointCloud = zeros(pointCloudeSize,3);
+            counter = 1;
+            tic
+
+            for q1 = qlim(1,1):stepRads:qlim(1,2)
+                for q2 = qlim(2,1):stepRads:qlim(2,2)
+                    for q3 = qlim(3,1):stepRads:qlim(3,2)
+                        for q4 = qlim(4,1):stepRads:qlim(4,2)
+                            for q5 = qlim(5,1):stepRads:qlim(5,2)
+                                % Don't need to worry about joint 7, just assume it=0
+                                for q6 = qlim(6,1):stepRads:qlim(6,2)
+                                    q7 = 0;
+                                    q = [q1,q2,q3,q4,q5,q6,q7];
+                                    tr = robot.model.fkine(q);     
+                                    translationVector = tr.t;
+                                    pointCloud(counter,:) = translationVector;
+                                    counter = counter + 1; 
+                                    if mod(counter/pointCloudeSize * 100,1) == 0
+                                        display(['After ',num2str(toc),' seconds, completed ',num2str(counter/pointCloudeSize * 100),'% of poses']);
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+            
+            % 2.6 Create a 3D model showing where the end effector can be over all these samples.  
+            hold on;
+            plot3(pointCloud(:,1),pointCloud(:,2),pointCloud(:,3),'r.');
+            %% Store all possible position of the robot
+            data = pointCloud;
+            filename = 'PositionUR5CanDo.txt';  % Specify the file name
+            % Call the function to write data to the file
+            writeToTextFile(filename, data);
+
+            %% function writeToTextFile
+            function writeToTextFile(filename, data)
+                % Check if the file exists
+                if ~exist(filename, 'file')
+                    % Create a new file if it doesn't exist
+                    try
+                        fileID = fopen(filename, 'w');
+                        fclose(fileID);
+                    catch
+                        error('Failed to create the file.');
+                    end
+                end
+            
+                % Open the file for writing
+                fileID = fopen(filename, 'w');
+            
+                % Write the data to the file
+                fprintf(fileID, '%d %d %d\n', data');
+            
+                % Close the file
+                fclose(fileID);
+            end
+            
+        end
+
+        function checkValueInFile(filename, targetValue)
+            % Read data from the file
+            try
+                fileData = importdata(filename);  % Import data from the file
+                data = fileData;  % Extract data from the imported data structure
+            catch
+                error('Failed to read data from the file.');
+            end
+        
+            % Assuming you have defined targetValue and data as mentioned
+            found = false;  % Initialize a flag to check if the value is found
+            
+            % Define the number of decimal places to round to
+            decimalPlaces = 3;
+            
+            % Round the targetValue to the specified number of decimal places
+            roundedTargetValue = round(targetValue, decimalPlaces);
+            
+            % Check if targetValue is present in data (rounded to the same decimal places)
+            for i = 1:size(data, 1)
+                roundedData = round(data(i, :), decimalPlaces);
+                if isequal(roundedData, roundedTargetValue)
+                    found = true;
+                    break;  % Exit the loop if the value is found
+                end
+            end
+            
+            % Print a message based on whether the value is found
+            if found
+                fprintf('Value [%f %f %f] is present in the file.\n', targetValue);
+            else
+                fprintf('Value [%f %f %f] is not found in the file.\n', targetValue);
+            end
+        end
+
+        function DisplayAllPossiblePositionAndWorkspace(filename)
+            % Read data from the file
+            try
+                fileData = importdata(filename);  % Import data from the file
+                data = fileData;  % Extract data from the imported data structure
+            catch
+                error('Failed to read data from the file.');
+            end
+        
+            % Display collected data points
+            % figure;
+            check = plot3(data(:,1),data(:,2),data(:,3),'r.');
+            display('Press enter to continue calculation of workspace')
+            pause();
+            % xlabel('X');
+            % ylabel('Y');
+            % zlabel('Z');
+            % title('Collected Data Points');
+        
+            % Calculate workspace radius and volume
+            min_x = min(data(:,1))
+            max_x = max(data(:,1))
+            min_y = min(data(:,2))
+            max_y = max(data(:,2))
+            min_z = min(data(:,3))
+            max_z = max(data(:,3))
+            
+            % Calculate workspace radius
+            workspace_radius = max(sqrt(max_x^2 + max_y^2 + max_z^2), sqrt(min_x^2 + min_y^2 + min_z^2));
+        
+            % Calculate workspace volume (using Monte Carlo sampling)
+            num_samples = length(data);
+            sample_points = [rand(num_samples, 1)*(max_x-min_x)+min_x, ...
+                             rand(num_samples, 1)*(max_y-min_y)+min_y, ...
+                             rand(num_samples, 1)*(max_z-min_z)+min_z];
+            points_inside_workspace = sum(sample_points(:,1).^2 + sample_points(:,2).^2 + sample_points(:,3).^2 <= workspace_radius^2);
+            workspace_volume = points_inside_workspace / num_samples * (max_x-min_x) * (max_y-min_y) * (max_z-min_z);
+            
+            % Calculate and display maximum reach
+            max_reach = max(sqrt(max_x^2 + max_y^2 + max_z^2), sqrt(min_x^2 + min_y^2 + min_z^2));
+            
+            % Display minimum and maximum values for X, Y, and Z coordinates
+            fprintf('Minimum X: %.4f\n m', min_x);
+            fprintf('Maximum X: %.4f\n m', max_x);
+            fprintf('Minimum Y: %.4f\n m', min_y);
+            fprintf('Maximum Y: %.4f\n m', max_y);
+            fprintf('Minimum Z: %.4f\n m', min_z);
+            fprintf('Maximum Z: %.4f\n m', max_z);
+            
+            % Display workspace radius and volume
+            fprintf('Workspace Radius: %.4f m\n ', workspace_radius);
+            fprintf('Workspace Volume: %.4f m^3\n', workspace_volume);
+            fprintf('Maximum Reach: %.4f\n m', max_reach);
+
+            
+
+            display('Press enter to delete this plot spaces')
+            pause();
+            try delete(check); end
+        end
+
         
 
 
         
-        % function self = setupEnvironment(self)
+        % function self = SetupEnvironment(self)
         %     hold on;
         %     PlaceObject('table_v1.ply', [-0.4,0,0]);
         %     PlaceObject('table_v1.ply', [-0.4,1,0]);
