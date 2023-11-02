@@ -20,6 +20,7 @@ classdef main
         links = [];
 
         % Setup robot pose
+        PickupPose = {[-0.4590 0 0.8295 -1.9506 -0.1776 0 -pi/1.5], [1.9220 2.1520 2.4021 0.0187 0.0187 -3.4]}
         pose = cell(1,2);
         pose1 = {transl([0 1 1]) * troty(0, 'deg'), transl([0 0 1]) * trotz(0, 'deg')};
         pose2 = cell(1,2);
@@ -39,13 +40,11 @@ classdef main
                     {[0 0.2797 -0.3640 0 -1.1375 1.5761 -1.8507], [-2.3562 2.2048 2.1457 0.7330 0.8378 2.3562]}
 
                     }
-        % Preparepose{1} = [-0.4 0 0 0 0 0 -pi/2];
-        % Preparepose{2} = [-pi/2 pi/2 -0 pi/3 0 0.5];
-        
+
         % Object in the scence that are 3D models
         ObjectInTheScene=[];
 
-        
+        gripper = zeros(2,3);
         Grip1;
         Grip2;
         GripDegree = 45;
@@ -67,6 +66,8 @@ classdef main
             %% Setup Robots
             self.robots{1} = self.SetupRobot(self.baseRobot{1}, false);
             self.robots{2} = self.SetupRobot(self.baseRobot{2}, true);
+            self.gripper(1,:) = self.CreateGrip(self.gripper(1,:),self.robots{1});
+            self.gripper(2,:) = self.CreateGrip(self.gripper(2,:),self.robots{2});
             %% Setup Ellipsoid
             self.robots = self.SetupEllipsoid(self.robots);            
             %% Setup Environment
@@ -97,14 +98,15 @@ classdef main
 
         function Execution(self)
             % pickup the sword
-            self.pickupSwordsStep(self.robots, self.swordStartLoc, self.swords, self.sword_vertices, self.steps);
+            
+            [self,collision] = self.pickupSwordsStep(self.robots, self.PickupPose, self.swords, self.sword_vertices, self.steps);
             % Prepare the to fight 
-            self.PreparePoses(self.robots, self.Preparepose, self.swords, self.sword_vertices, self.steps);
+            [self,collision] = self.PreparePoses(self.robots, self.Preparepose, self.swords, self.sword_vertices, self.steps);
             % Start random pose to fighting
             for i = 1:length(self.DemoPose)
                 Pose = self.DemoPose{i};
-                self.MoveRobotToLocation(self.robots, Pose, self.swords, self.sword_vertices, self.steps);
-                self.PreparePoses(self.robots, self.Preparepose, self.swords, self.sword_vertices, self.steps);
+                [self,collision] = self.MoveRobotToLocation(self.robots, Pose, self.swords, self.sword_vertices, self.steps);
+                [self,collision] = self.PreparePoses(self.robots, self.Preparepose, self.swords, self.sword_vertices, self.steps);
             end
            
         end
@@ -149,7 +151,7 @@ classdef main
             PlaceObject('model3D/Traffic Cone.ply', [2,-2,0]);
 
             view(3);
-            axis([-6 6 -6 6 -0.1 4]);
+            axis([-6 6 -6 6 0.1 4]);
             camlight;
         end
         function PlaceFloor(self, imageSize, img)
@@ -243,8 +245,10 @@ classdef main
         end
        
         %% This function is initial function for the robot to pickup swords and return the pose to prepare pose
-        function collision = pickupSwordsStep(self, robots, locations, swords, swordVertices, steps)
-            collision = self.MoveRobotToLocation(robots, locations, [], swordVertices, steps, true);
+        function [self,collision] = pickupSwordsStep(self, robots, locations, swords, swordVertices, steps)
+            [self,collision] = self.MoveRobotToLocation(robots, locations, [], swordVertices, steps, true);
+            self.gripper(1,:) = self.GridGripping(self.gripper(1,:), robots{1}, true);
+            self.gripper(2,:) = self.GridGripping(self.gripper(2,:), robots{2}, true);
             for i = 1:length(robots)
                 robot = robots{i};
                 sword = swords{i};
@@ -252,26 +256,27 @@ classdef main
                 self.MoveSwords(robot, sword, vertices);
                 pause(0.001);
             end
-            for i=1:length(self.grip_)
-                gripper = self.grip_{i};
-                % self.closeEndEffector(gripper(1), gripper(2));
-            end
+            % for i=1:length(self.grip_)
+            %     gripper = self.grip_{i};
+            %     % self.closeEndEffector(gripper(1), gripper(2));
+            % end
         end
 
-        function collision = PreparePoses(self, robots, locations, swords, swordVertices, steps)
-            self.MoveRobotToLocation(robots, locations, swords, swordVertices, steps, false);
-            for i = 1:length(robots)
-                robot = robots{i};
-                sword = swords{i};
-                vertices = swordVertices{i};
-                self.MoveSwords(robot, sword, vertices);
-                pause(0.001);
-            end
+        function [self,collision] = PreparePoses(self, robots, locations, swords, swordVertices, steps)
+            [self,collision] = self.MoveRobotToLocation(robots, locations, swords, swordVertices, steps, false);
+            % for i = 1:length(robots)
+            %     robot = robots{i};
+            %     sword = swords{i};
+            %     vertices = swordVertices{i};
+            %     self.MoveSwords(robot, sword, vertices);
+            %     pause(0.001);
+            % end
         end
 
         %% Move the robot base on end-effector from 'location', update swords location and checking collision between robot parts itself.
-        function collision = MoveRobotToLocation(self, robots, locations, swords, swordVertices, steps, PassCollision, GripOpen)
-            GripOpen = false;
+        function [self,collision] = MoveRobotToLocation(self, robots, locations, swords, swordVertices, steps, PassCollision)
+            % GripOpen = false;
+            collision = false;
             if nargin < 7			
                 PassCollision = true;		
         		
@@ -286,6 +291,7 @@ classdef main
             end
             
             for s = 1:steps
+                swordVertices = self.UpdateObjectsVertices(self.swords);
                 for i = 1:length(robots)
                     robot = robots{i};
                     sword = [];
@@ -303,11 +309,12 @@ classdef main
                     end
                     self.MoveSwords(robot, sword, vertices);
                     base_pose_endEffector = robot.model.fkine(robot.model.getpos);
-                    grip = self.grip_{i};
+                    % grip = self.grip_{i};
                     % self.moveEndEffector(base_pose_endEffector.T, grip(1), grip(2), GripOpen);
-                    pause(0.001);
+                    % pause(0.001);
                 end
-
+                self.gripper(1,:) = self.SetupGrip(self.gripper(1,:),self.robots{1});
+                self.gripper(2,:) = self.SetupGrip(self.gripper(2,:),self.robots{2});
                 %% this may need to be in the CheckCollision ////////////////////////////////////////////////////////
                 if PassCollision
                     [self.sword_vertices] = self.UpdateObjectsVertices(self.swords);
@@ -330,6 +337,8 @@ classdef main
                 end
                 %% ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
             end
+            % self.gripper(1,:) = self.DeleteGrip(self.gripper(1,:),self.robots{1});
+            % self.gripper(2,:) = self.DeleteGrip(self.gripper(2,:),self.robots{2});
         end
 
         function qMatrix = CalculateQmatrix(self, robot, location, steps)
@@ -806,6 +815,7 @@ classdef main
             % try delete(check); end
         end
 
+        %% Gripper //////////////////////////////////////////
         %% Move end effector grippers
         function moveEndEffector(self, base_pos, grip_1, grip_2, end_effector_open)
             grip_1.base = base_pos*trotx(pi/2)*transl(0.035,0,0);
@@ -853,34 +863,68 @@ classdef main
             grip_2.plot(q);
         end
 
+        % Gripper //////////////////////////////////////////
+        function gripper = CreateGrip(self, gripper,robot)
+            pose = robot.model.fkine(robot.model.getpos).T;
+            gripper(1) = self.DeleteObject(gripper(1));
+            gripper(2) = self.DeleteObject(gripper(2));
+            gripper(1) = PlaceObject('model3D/Newhand.ply');
+            gripper(2) = PlaceObject('model3D/Newhand2.ply');
+            gripper(3) = 45;
+            % need to set z of end-effector to have offset in z about 0.0859
+            self.RotateObjectgGripper(gripper(1), [0,0,0], pose * trotz(180, 'deg') * trotx(-gripper(3), 'deg'));
+            self.RotateObjectgGripper(gripper(2), [0,0,0], pose * trotz(180, 'deg') * trotx(gripper(3), 'deg'));
+        end
+        function gripper = SetupGrip(self, gripper,robot)
+            pose = robot.model.fkine(robot.model.getpos).T;
+            gripper(1) = self.DeleteObject(gripper(1));
+            gripper(2) = self.DeleteObject(gripper(2));
+            gripper(1) = PlaceObject('model3D/Newhand.ply');
+            gripper(2) = PlaceObject('model3D/Newhand2.ply');
+            % need to set z of end-effector to have offset in z about 0.0859
+            self.RotateObjectgGripper(gripper(1), [0,0,0], pose * trotz(180, 'deg') * trotx(-gripper(3), 'deg'));
+            self.RotateObjectgGripper(gripper(2), [0,0,0], pose * trotz(180, 'deg') * trotx(gripper(3), 'deg'));
+        end
+        function gripper = DeleteGrip(self, gripper,robot)
+            gripper(1) = self.DeleteObject(gripper(1));
+            gripper(2) = self.DeleteObject(gripper(2));
+        end
+        function obj = DeleteObject(self, obj)
+            try
+                delete(obj);
+            end
+        end
 
-
-        %% Gripper //////////////////////////////////////////
-        % function obj = SetupGrip(obj)
-        %     obj.Grip1 = obj.DeleteObject(obj.Grip1);
-        %     obj.Grip2 = obj.DeleteObject(obj.Grip2);
-        %     obj.Grip1 = PlaceObject('Newhand.ply');
-        %     obj.Grip2 = PlaceObject('Newhand2.ply');
-        %     pose = obj.robot.model.fkine(obj.robot.model.getpos).T;
-        %     % need to set z of end-effector to have offset in z about 0.0859
-        %     obj.RotateObject(obj.Grip1, [0,0,0], pose * trotz(180, 'deg') * trotx(-obj.GripDegree, 'deg'));
-        %     obj.RotateObject(obj.Grip2, [0,0,0], pose * trotz(180, 'deg') * trotx(obj.GripDegree, 'deg'));
-        % end
-        % function obj = DeleteObject(obj)
-        %     try delete(obj); end
-        % end
-        % function RotateObject (obj,location, degree)
-        %     % Define the rotation angle in degrees (e.g., 180 degrees)
-        %     rotationAngleDegrees = degree;
-        %     % Create a homogeneous transformation matrix for rotation
-        %     rotationMatrix = transl(location) * rotationAngleDegrees;            
-        %     % Get the object's vertices
-        %     vertices = get(obj, 'Vertices');
-        %     % Apply the rotation transformation to the object's vertices
-        %     transformedVertices = (rotationMatrix * [vertices, ones(size(vertices, 1), 1)]')';
-        %     % Update the object's vertices with the rotated vertices
-        %     set(obj, 'Vertices', transformedVertices(:, 1:3));
-        % end
+        function RotateObjectgGripper (self, gripper,location, degree)
+            % Define the rotation angle in degrees (e.g., 180 degrees)
+            rotationAngleDegrees = degree;
+            % Create a homogeneous transformation matrix for rotation
+            rotationMatrix = transl(location) * rotationAngleDegrees;            
+            % Get the object's vertices
+            vertices = get(gripper, 'Vertices');
+            % Apply the rotation transformation to the object's vertices
+            transformedVertices = (rotationMatrix * [vertices, ones(size(vertices, 1), 1)]')';
+            % Update the object's vertices with the rotated vertices
+            set(gripper, 'Vertices', transformedVertices(:, 1:3));
+        end
+        function gripper = GridGripping(self, gripper, robot, setGrip)   % true if grip, false ungrip
+            for i = 1:30
+                if setGrip
+                    gripper(3) = gripper(3) - 1;
+                else
+                    gripper(3) = gripper(3) + 1;
+                end
+                pose = robot.model.fkine(robot.model.getpos).T;
+                % Degree = Degree - 1;
+                gripper(1) = self.DeleteObject(gripper(1));
+                gripper(2) = self.DeleteObject(gripper(2));
+                gripper(1) = PlaceObject('model3D/Newhand.ply');
+                gripper(2) = PlaceObject('model3D/Newhand2.ply');
+                self.RotateObjectgGripper(gripper(1), [0,0,0], pose * trotz(180, 'deg') * trotx(-gripper(3), 'deg'))
+                self.RotateObjectgGripper(gripper(2), [0,0,0], pose * trotz(180, 'deg') * trotx(gripper(3), 'deg'))
+                pause(0.001);
+            end 
+        end
 
 
     end
