@@ -5,6 +5,9 @@ classdef main
     properties
         % Properties
         robots = cell(1,2);
+        grip_ = cell(1,2);
+        grip_1;
+        grip_2;
         
         swordfile = {"model3D/Lightsaber2.ply", "model3D/Lightsaber2.ply"};
         baseRobot = {transl(0,0,0.5), transl(0,1,0.5)};
@@ -34,12 +37,18 @@ classdef main
                     {[-0.4 -0.5 0 pi/3 1 0 0], [-pi/4 pi/2.5 pi/2.2 pi/2 0 0]}
                     {[-0.4559 -0.5775 -1.2918 -0.1777 2.6849 -1.5708 2.1482], [-1.5708 2.1906 2.2471 0.7330 0.8378 1.5708]}
                     {[0 0.2797 -0.3640 0 -1.1375 1.5761 -1.8507], [-2.3562 2.2048 2.1457 0.7330 0.8378 2.3562]}
+
                     }
         % Preparepose{1} = [-0.4 0 0 0 0 0 -pi/2];
         % Preparepose{2} = [-pi/2 pi/2 -0 pi/3 0 0.5];
         
         % Object in the scence that are 3D models
         ObjectInTheScene=[];
+
+        
+        Grip1;
+        Grip2;
+        GripDegree = 45;
 
         advance = false;            % set advance to true if want to turn on GUI
     end
@@ -71,6 +80,16 @@ classdef main
             self.pose{1} = self.robots{1}.model.fkine(self.robots{1}.homeQ).T;
             self.pose{2} = self.robots{2}.model.fkine(self.robots{2}.homeQ).T;
 
+            %% Setup Gripper
+            % [R1grip_1, R1grip_2] = self.makeEndEffector();
+            % [R2grip_1, R2grip_2] = self.makeEndEffector();
+            % self.grip_{1} = [R1grip_1, R1grip_2];
+            % self.grip_{2} = [R2grip_1, R2grip_2];
+
+
+            % self.DisplayAllPossiblePositionAndWorkspace('logs file/FanucM20.txt');
+            % self.DisplayAllPossiblePositionAndWorkspace('logs file/PositionUR5CanDo.txt');
+            % 
             %% Execution 
             self.Execution();
             
@@ -99,30 +118,79 @@ classdef main
             end
             robot.model.delay = 0.01;
             q = zeros(1, length(robot.model.links));
-            if newRobot
-                scale = 0.3;
-                % robot.model.plot(q, 'scale', scale);
-                robot.model.animate(q);
-            else
-                robot.model.animate(q);
-            end
+            robot.model.animate(q);
         end
 
         %% Setup Environment of the scene 
         function Object = SetupEnvironment(self)
             hold on;
+            self.PlaceFloor(20, 'Images/floor.jpg');
+            self.PlaceWall(0,6,4,15,'Images/KendoClub1.jpg', true);
+            self.PlaceWall(6,0,4,15,'Images/KendoClub1.jpg', false);
             
-            Object{1} = PlaceObject('table_v1.ply', [-0.4,0,0]); % Assuming PlaceObject is a function or another script
-            Object{2} = PlaceObject('table_v1.ply', [-0.4,1,0]);
+            Object{1} = PlaceObject('model3D/table_v1.ply', [-0.4,0,0]); % Assuming PlaceObject is a function or another script
+            Object{2} = PlaceObject('model3D/table_v1.ply', [-0.4,1,0]);
+            PlaceObject('model3D/C3PO.ply', [4,-2,0]);
+            PlaceObject('model3D/C3PO.ply', [4,-1,0]);
+            PlaceObject('model3D/C3PO.ply', [4,0,0]);
+            PlaceObject('model3D/C3PO.ply', [4,1,0]);
+            PlaceObject('model3D/C3PO.ply', [4,2,0]);
+            PlaceObject('model3D/Star_wars_JAWA.ply', [-2,5,0]);
+            PlaceObject('model3D/Star_wars_JAWA.ply', [-1,5,0]);
+            PlaceObject('model3D/Star_wars_JAWA.ply', [0,5,0]);
+            PlaceObject('model3D/Star_wars_JAWA.ply', [1,5,0]);
+            PlaceObject('model3D/Star_wars_JAWA.ply', [2,5,0]);
+            PlaceObject('model3D/TABLER~1.PLY', [0,4,0]);
+            PlaceObject('model3D/fireExtinguisher.ply', [1,4,0]);
+            PlaceObject('model3D/emergencyStopButton.ply', [-0.2,4,0.25]);
+            PlaceObject('model3D/Traffic Cone.ply', [-2,3.5,0]);
+            PlaceObject('model3D/Traffic Cone.ply', [2,3.5,0]);
+            PlaceObject('model3D/Traffic Cone.ply', [-2,-2,0]);
+            PlaceObject('model3D/Traffic Cone.ply', [2,-2,0]);
 
-            % ObjectInTheScene = cell(size(Object));
-            % % Assign Vertices for object 
-            % for i=1:length(Object)
-            %     ObjectInTheScene{i} = get(Object{i}, 'Vertices');
-            % end
             view(3);
-            axis([-2 2 -2 3 0 4]);
+            axis([-6 6 -6 6 -0.1 4]);
             camlight;
+        end
+        function PlaceFloor(self, imageSize, img)
+            img = imread(img);
+            img = im2double(img);
+            % Define the size and position of the image
+            imageSize = imageSize;  % Size of the image (5x5 units)
+            [rows, cols] = size(img);
+            scaleFactorX = imageSize / cols;
+            scaleFactorY = imageSize / rows;
+            
+            % Create a scaled meshgrid
+            [X, Y] = meshgrid(linspace(-imageSize/2, imageSize/2, cols), linspace(-imageSize/2, imageSize/2, rows));
+            
+            % Set Z to zero for a flat surface
+            Z = zeros(size(X));
+            
+            % Plot the image
+            surf(X, Y, Z, img, 'FaceColor', 'texturemap', 'EdgeColor', 'none');
+        end
+        function PlaceWall(self, x,y,height,wallWidth,img, rotate)
+            % Read the image
+            img = imread(img);
+            img = imrotate(img, 180);
+            img = im2double(img);  % Convert to double for texture mapping
+            % Define the wall dimensions and position
+            wallWidth = wallWidth;  % Width of the wall
+            wallHeight = height; % Height of the wall
+            wallPositionX = x; % X position of the wall
+            wallPositionY = y; % Y position of the wall
+            if rotate
+                % Create a meshgrid for the wall
+                [X, Z] = meshgrid(linspace(wallPositionX - wallWidth/2, wallPositionX + wallWidth/2, 100), linspace(0, wallHeight, 100));
+                Y = wallPositionY * ones(size(X)); % Y is constant as the wall is vertical
+            else
+                % Create a meshgrid for the wall
+                [Y, Z] = meshgrid(linspace(wallPositionY - wallWidth/2, wallPositionY + wallWidth/2, 100), linspace(0, wallHeight, 100));
+                X = wallPositionX * ones(size(Y)); % Y is constant as the wall is vertical
+            end
+            % Plot the wall
+            surf(X, Y, Z, img, 'FaceColor', 'texturemap', 'EdgeColor', 'none');  % Change 'blue' to any color you like
         end
         
         %% Plot bounding box
@@ -155,8 +223,6 @@ classdef main
             for i=1:length(objects)
                 sword_vertices{i} = get(objects{i}, 'Vertices');
             end
-            % sword2_vertices = get(sword2, 'Vertices');
-            % sword_vertices = {sword1_vertices, sword2_vertices};
         end
        
         %% Check collision of swords
@@ -178,13 +244,17 @@ classdef main
        
         %% This function is initial function for the robot to pickup swords and return the pose to prepare pose
         function collision = pickupSwordsStep(self, robots, locations, swords, swordVertices, steps)
-            collision = self.MoveRobotToLocation(robots, locations, [], swordVertices, steps);
+            collision = self.MoveRobotToLocation(robots, locations, [], swordVertices, steps, true);
             for i = 1:length(robots)
                 robot = robots{i};
                 sword = swords{i};
                 vertices = swordVertices{i};
                 self.MoveSwords(robot, sword, vertices);
                 pause(0.001);
+            end
+            for i=1:length(self.grip_)
+                gripper = self.grip_{i};
+                % self.closeEndEffector(gripper(1), gripper(2));
             end
         end
 
@@ -200,10 +270,11 @@ classdef main
         end
 
         %% Move the robot base on end-effector from 'location', update swords location and checking collision between robot parts itself.
-        function collision = MoveRobotToLocation(self, robots, locations, swords, swordVertices, steps, PassCollision)
-            
+        function collision = MoveRobotToLocation(self, robots, locations, swords, swordVertices, steps, PassCollision, GripOpen)
+            GripOpen = false;
             if nargin < 7			
-                PassCollision = true;				
+                PassCollision = true;		
+        		
             end
 
             qMatrix = cell(1, length(robots));
@@ -231,6 +302,9 @@ classdef main
                         display(qMatrix{i}(s,:));
                     end
                     self.MoveSwords(robot, sword, vertices);
+                    base_pose_endEffector = robot.model.fkine(robot.model.getpos);
+                    grip = self.grip_{i};
+                    % self.moveEndEffector(base_pose_endEffector.T, grip(1), grip(2), GripOpen);
                     pause(0.001);
                 end
 
@@ -421,18 +495,7 @@ classdef main
                 %             reshape(translatedPoints(2, :), size(Y)), ...
                 %             reshape(translatedPoints(3, :), size(Z)));
             end
-        
-            % % Wait for 0.1 seconds after plotting all ellipsoids
-            % pause(0.1);
-            % 
-            % % Delete all the surface plots
-            % for i = 2:numLinks
-            %     if isgraphics(h{i})
-            %         delete(h{i});
-            %     end
-            % end
         end
-
 
         %% GetLinkPoses
         % q - robot joint angles
@@ -497,21 +560,6 @@ classdef main
             end
             for i = 2: size(poses2,3)
                 for k = 2: size(point1,2)
-                    % distanceFromXYZ = robot1.model.links(i-1).a';
-                    % radii = [distanceFromXYZ/1.5, 0.2, 0.2];
-                    % 
-                    % cubePointsAndOnes = [inv(poses1(:,:,i)) * [point2{k},ones(size(point2{k},1),1)]']';
-                    % updatedCubePoints = cubePointsAndOnes(:,1:3);
-                    % % base = robot1.model.base.T;
-                    % base = poses1(:,:,2);
-                    % algebraicDist = self.GetAlgebraicDist(updatedCubePoints, base(1:3,4)', radii);
-                    % pointsInside = find(algebraicDist < 1);
-                    % if length(pointsInside) > 5
-                    %     disp(['Base on robot1 There are ', num2str(size(pointsInside,1)),' tr inside the ',num2str(i), ' points inside the ',num2str(k), ' th ellipsoid']);
-                    %     collision = true;
-                    %     return;
-                    % end
-
                     swordCollide = self.checkObjectsCollision(sword_vertices{2}, point1{k});
                     if swordCollide
                         disp('Sword 2 attacked robot 1')
@@ -533,7 +581,7 @@ classdef main
             end
         end
 
-        function CalculateAllPossiblePosition(robot)
+        function CalculateAllPossiblePositionRobot1(self,robot)
             stepRads = deg2rad(30);
             qlim = robot.model.qlim;
             % Don't need to worry about joint 7
@@ -599,6 +647,71 @@ classdef main
             
         end
 
+        function CalculateAllPossiblePositionRobot2(self,robot)
+            stepRads = deg2rad(30);
+            qlim = robot.model.qlim;
+            % Don't need to worry about joint 7
+            pointCloudeSize = prod(floor((qlim(1:6,2)-qlim(1:6,1))/stepRads + 1));
+            pointCloud = zeros(pointCloudeSize,3);
+            counter = 1;
+            tic
+
+            for q1 = qlim(1,1):stepRads:qlim(1,2)
+                for q2 = qlim(2,1):stepRads:qlim(2,2)
+                    for q3 = qlim(3,1):stepRads:qlim(3,2)
+                        for q4 = qlim(4,1):stepRads:qlim(4,2)
+                            for q5 = qlim(5,1):stepRads:qlim(5,2)
+                                % Don't need to worry about joint 7, just assume it=0
+                                q6 = 0;
+                                q = [q1,q2,q3,q4,q5,q6];
+                                tr = robot.model.fkine(q);     
+                                translationVector = tr.t;
+                                pointCloud(counter,:) = translationVector;
+                                counter = counter + 1; 
+                                if mod(counter/pointCloudeSize * 100,1) == 0
+                                    display(['After ',num2str(toc),' seconds, completed ',num2str(counter/pointCloudeSize * 100),'% of poses']);
+                                end
+                                
+                            end
+                        end
+                    end
+                end
+            end
+            
+            % 2.6 Create a 3D model showing where the end effector can be over all these samples.  
+            hold on;
+            plot3(pointCloud(:,1),pointCloud(:,2),pointCloud(:,3),'r.');
+            %% Store all possible position of the robot
+            data = pointCloud;
+            filename = 'FanucM20.txt';  % Specify the file name
+            % Call the function to write data to the file
+            writeToTextFile(filename, data);
+
+            %% function writeToTextFile
+            function writeToTextFile(filename, data)
+                % Check if the file exists
+                if ~exist(filename, 'file')
+                    % Create a new file if it doesn't exist
+                    try
+                        fileID = fopen(filename, 'w');
+                        fclose(fileID);
+                    catch
+                        error('Failed to create the file.');
+                    end
+                end
+            
+                % Open the file for writing
+                fileID = fopen(filename, 'w');
+            
+                % Write the data to the file
+                fprintf(fileID, '%d %d %d\n', data');
+            
+                % Close the file
+                fclose(fileID);
+            end
+            
+        end
+
         function checkValueInFile(filename, targetValue)
             % Read data from the file
             try
@@ -634,7 +747,7 @@ classdef main
             end
         end
 
-        function DisplayAllPossiblePositionAndWorkspace(filename)
+        function DisplayAllPossiblePositionAndWorkspace(self,filename)
             % Read data from the file
             try
                 fileData = importdata(filename);  % Import data from the file
@@ -646,216 +759,132 @@ classdef main
             % Display collected data points
             % figure;
             check = plot3(data(:,1),data(:,2),data(:,3),'r.');
-            display('Press enter to continue calculation of workspace')
-            pause();
+            % display('Press enter to continue calculation of workspace')
+            % pause();
             % xlabel('X');
             % ylabel('Y');
             % zlabel('Z');
             % title('Collected Data Points');
-        
-            % Calculate workspace radius and volume
-            min_x = min(data(:,1))
-            max_x = max(data(:,1))
-            min_y = min(data(:,2))
-            max_y = max(data(:,2))
-            min_z = min(data(:,3))
-            max_z = max(data(:,3))
-            
-            % Calculate workspace radius
-            workspace_radius = max(sqrt(max_x^2 + max_y^2 + max_z^2), sqrt(min_x^2 + min_y^2 + min_z^2));
-        
-            % Calculate workspace volume (using Monte Carlo sampling)
-            num_samples = length(data);
-            sample_points = [rand(num_samples, 1)*(max_x-min_x)+min_x, ...
-                             rand(num_samples, 1)*(max_y-min_y)+min_y, ...
-                             rand(num_samples, 1)*(max_z-min_z)+min_z];
-            points_inside_workspace = sum(sample_points(:,1).^2 + sample_points(:,2).^2 + sample_points(:,3).^2 <= workspace_radius^2);
-            workspace_volume = points_inside_workspace / num_samples * (max_x-min_x) * (max_y-min_y) * (max_z-min_z);
-            
-            % Calculate and display maximum reach
-            max_reach = max(sqrt(max_x^2 + max_y^2 + max_z^2), sqrt(min_x^2 + min_y^2 + min_z^2));
-            
-            % Display minimum and maximum values for X, Y, and Z coordinates
-            fprintf('Minimum X: %.4f\n m', min_x);
-            fprintf('Maximum X: %.4f\n m', max_x);
-            fprintf('Minimum Y: %.4f\n m', min_y);
-            fprintf('Maximum Y: %.4f\n m', max_y);
-            fprintf('Minimum Z: %.4f\n m', min_z);
-            fprintf('Maximum Z: %.4f\n m', max_z);
-            
-            % Display workspace radius and volume
-            fprintf('Workspace Radius: %.4f m\n ', workspace_radius);
-            fprintf('Workspace Volume: %.4f m^3\n', workspace_volume);
-            fprintf('Maximum Reach: %.4f\n m', max_reach);
-
-            
-
-            display('Press enter to delete this plot spaces')
-            pause();
-            try delete(check); end
+            % 
+            % % Calculate workspace radius and volume
+            % min_x = min(data(:,1))
+            % max_x = max(data(:,1))
+            % min_y = min(data(:,2))
+            % max_y = max(data(:,2))
+            % min_z = min(data(:,3))
+            % max_z = max(data(:,3))
+            % 
+            % % Calculate workspace radius
+            % workspace_radius = max(sqrt(max_x^2 + max_y^2 + max_z^2), sqrt(min_x^2 + min_y^2 + min_z^2));
+            % 
+            % % Calculate workspace volume (using Monte Carlo sampling)
+            % num_samples = length(data);
+            % sample_points = [rand(num_samples, 1)*(max_x-min_x)+min_x, ...
+            %                  rand(num_samples, 1)*(max_y-min_y)+min_y, ...
+            %                  rand(num_samples, 1)*(max_z-min_z)+min_z];
+            % points_inside_workspace = sum(sample_points(:,1).^2 + sample_points(:,2).^2 + sample_points(:,3).^2 <= workspace_radius^2);
+            % workspace_volume = points_inside_workspace / num_samples * (max_x-min_x) * (max_y-min_y) * (max_z-min_z);
+            % 
+            % % Calculate and display maximum reach
+            % max_reach = max(sqrt(max_x^2 + max_y^2 + max_z^2), sqrt(min_x^2 + min_y^2 + min_z^2));
+            % 
+            % % Display minimum and maximum values for X, Y, and Z coordinates
+            % fprintf('Minimum X: %.4f\n m', min_x);
+            % fprintf('Maximum X: %.4f\n m', max_x);
+            % fprintf('Minimum Y: %.4f\n m', min_y);
+            % fprintf('Maximum Y: %.4f\n m', max_y);
+            % fprintf('Minimum Z: %.4f\n m', min_z);
+            % fprintf('Maximum Z: %.4f\n m', max_z);
+            % 
+            % % Display workspace radius and volume
+            % fprintf('Workspace Radius: %.4f m\n ', workspace_radius);
+            % fprintf('Workspace Volume: %.4f m^3\n', workspace_volume);
+            % fprintf('Maximum Reach: %.4f\n m', max_reach);
+            % 
+            % display('Press enter to delete this plot spaces')
+            % pause();
+            % try delete(check); end
         end
 
-        
+        %% Move end effector grippers
+        function moveEndEffector(self, base_pos, grip_1, grip_2, end_effector_open)
+            grip_1.base = base_pos*trotx(pi/2)*transl(0.035,0,0);
+            grip_2.base = base_pos*trotx(pi/2)*transl(-0.035,0,0);
+            % grip_1.base = grip_1_plot;
+            % grip_2.base = grip_2_plot;
+
+            if end_effector_open == true
+                q = [145*pi/180];
+            else
+                q = [pi/2];
+            end
+         
+            grip_1.animate(pi-q);                  % Plot the robot
+            grip_2.animate(q);
+        end
+         
+        %% Open end effector grippers
+        function openEndEffector(self, grip_1, grip_2)
+            for i = (pi/2):(pi/70):(145*pi/180)
+                grip_1.animate(pi-i);                  % Plot the robot
+                grip_2.animate(i);
+            end
+        end
+         
+        %% Close end effector grippers
+        function closeEndEffector(self, grip_1, grip_2)
+            for i = (145*pi/180):(-pi/70):(pi/2)
+                grip_1.animate(pi-i);                  % Plot the robot
+                grip_2.animate(i);
+            end
+        end
+        function [grip_1, grip_2] = makeEndEffector(self, name)
+            % Define DH parameters for gripper 1
+            L1 = Link('d',0, 'a', 0.04, 'alpha', 0, 'qlim',[0 pi/2]);
+            % % Define DH parameters for gripper 2
+            L2 = Link('d',0, 'a', 0.04, 'alpha', 0, 'qlim',[pi/2 pi]);
+            
+            grip_1 = SerialLink([L1], 'name', 'TwoGripperEndEffector');
+            grip_2 = SerialLink([L2], 'name', 'TwoGripperEnd');
+            
+            q = [pi/2];
+         
+            grip_1.plot(q);                  % Plot the robot
+            grip_2.plot(q);
+        end
 
 
-        
-        % function self = SetupEnvironment(self)
-        %     hold on;
-        %     PlaceObject('table_v1.ply', [-0.4,0,0]);
-        %     PlaceObject('table_v1.ply', [-0.4,1,0]);
-        %     view(3);
 
-        %     axis([-2 2 -2 2 0 3]);
+        %% Gripper //////////////////////////////////////////
+        % function obj = SetupGrip(obj)
+        %     obj.Grip1 = obj.DeleteObject(obj.Grip1);
+        %     obj.Grip2 = obj.DeleteObject(obj.Grip2);
+        %     obj.Grip1 = PlaceObject('Newhand.ply');
+        %     obj.Grip2 = PlaceObject('Newhand2.ply');
+        %     pose = obj.robot.model.fkine(obj.robot.model.getpos).T;
+        %     % need to set z of end-effector to have offset in z about 0.0859
+        %     obj.RotateObject(obj.Grip1, [0,0,0], pose * trotz(180, 'deg') * trotx(-obj.GripDegree, 'deg'));
+        %     obj.RotateObject(obj.Grip2, [0,0,0], pose * trotz(180, 'deg') * trotx(obj.GripDegree, 'deg'));
         % end
-        
-        % function self = setupSwords(self)
-        %     self.sword1 = self.DeleteObject(self.sword1);
-        %     self.sword2 = self.DeleteObject(self.sword2);
-
-        %     self.sword1 = PlaceObject(self.swordfile1);
-        %     self.sword2 = PlaceObject(self.swordfile2);
-
-        %     self.sword1_vertices = get(self.sword1, 'Vertices');
-        %     self.sword2_vertices  = get(self.sword2, 'Vertices');
-        %     % pose1 = self.robot1.model.fkine(self.robot1.model.getpos).T;
-        %     self.RotateObject(self.sword1, (transl(self.sword1StartLoc) * trotx(90, 'deg') ));
-        %     self.RotateObject(self.sword2, (transl(self.sword2StartLoc) * trotx(90, 'deg') ));
-
-        %     % self.sword1_vertices = get(self.sword1, 'Vertices');
-        %     % self.sword2_vertices  = get(self.sword2, 'Vertices');
-        %     % [minXYZ, maxXYZ] = getObjectMinMaxVertices(self, self.sword1);
+        % function obj = DeleteObject(obj)
+        %     try delete(obj); end
         % end
-        
-        % function self = pickupSwords(self, robot, location, object, objectVertic)
-        %     if length(location) == 3
-        %         location = transl(location) * troty(90, 'deg') * trotx(90, 'deg');
-        %     else
-        %         % location = location;
-        %     end
-        %     % location = transl(location) * troty(90, 'deg') * trotx(90, 'deg');
-        %     self.MoveRobotToLocation(robot, location, object, objectVertic);
-        % end
-        
-        % function [self, sword]= MoveSwords(self, robot, sword, sword_vertices)
-        %     if (isempty(sword)) 
-        %         return;  
-        %     end
-        %     robotPose = robot.model.fkine(robot.model.getpos).T * trotz(90, 'deg');
-        %     transformedVertices = [sword_vertices, ones(size(sword_vertices,1),1)] * robotPose';
-        %     set(sword,'Vertices',transformedVertices(:,1:3));
-        % end
-        
-        
-        % function self = MoveRobotToLocation(self, robot, location, object, objectVertic)
-        %     if length(location) == 3
-        %         MoveToObject = transl(location) * troty(-90,'deg');% * trotz(90,'deg');
-        %     else
-        %         MoveToObject = location;
-        %     end
-        %     initialGuess = robot.model.getpos;
-        %     try 
-        %         newQ1 = robot.model.ikine(MoveToObject, 'q0', initialGuess, 'forceSoln');
-        %     catch 
-        %         newQ1 = robot.model.ikcon(MoveToObject, initialGuess);
-        %     end
-        %     if isempty(newQ1)
-        %         newQ1 = robot.model.ikcon(MoveToObject, 'q0', initialGuess);
-        %     end 
-        %     qMatrix = jtraj(initialGuess,newQ1,self.steps);
-        %     for i = 1:length(qMatrix)
-        %         try 
-        %             robot.model.animate(qMatrix(i,:)); 
-        %         catch 
-        %             disp('Unable to move in this matrix : ')
-        %             display(qMatrix(i,:))
-        %         end
-        %         [self, object] = self.MoveSwords(robot, object, objectVertic)
-        %         pause(0.001);
-               
-        %     end
-        % end
-
-        % function self = DeleteObject(self, object)
-        %     try 
-        %         delete(object); 
-        %     end
-        % end
-        % function RotateObject(self, object, transformMatrix)
+        % function RotateObject (obj,location, degree)
+        %     % Define the rotation angle in degrees (e.g., 180 degrees)
+        %     rotationAngleDegrees = degree;
+        %     % Create a homogeneous transformation matrix for rotation
+        %     rotationMatrix = transl(location) * rotationAngleDegrees;            
         %     % Get the object's vertices
-        %     vertices = get(object, 'Vertices');
+        %     vertices = get(obj, 'Vertices');
         %     % Apply the rotation transformation to the object's vertices
-        %     transformedVertices = (transformMatrix * [vertices, ones(size(vertices, 1), 1)]')';
+        %     transformedVertices = (rotationMatrix * [vertices, ones(size(vertices, 1), 1)]')';
         %     % Update the object's vertices with the rotated vertices
-        %     set(object, 'Vertices', transformedVertices(:, 1:3));
-        % end
-
-        % function MoveObject(object, rotationMatrix, rotationCenter)
-        %     % Get the object's vertices
-        %     vertices = get(object, 'Vertices');
-            
-        %     % Translate vertices to origin based on rotation center
-        %     vertices = vertices - repmat(rotationCenter, size(vertices, 1), 1);
-            
-        %     % Rotate the vertices
-        %     rotatedVertices = (rotationMatrix * vertices')';
-            
-        %     % Translate back to original location
-        %     rotatedVertices = rotatedVertices + repmat(rotationCenter, size(vertices, 1), 1);
-            
-        %     % Update the object's vertices
-        %     set(object, 'Vertices', rotatedVertices);
+        %     set(obj, 'Vertices', transformedVertices(:, 1:3));
         % end
 
 
-        % function [minXYZ, maxXYZ] = getObjectMinMaxVertices(self, object)
-        %     % Extracting the vertices of the object
-        %     vertices = get(object, 'Vertices');
-            
-        %     % Finding the min and max points along each axis
-        %     minX = min(vertices(:, 1));
-        %     minY = min(vertices(:, 2));
-        %     minZ = min(vertices(:, 3));
-            
-        %     maxX = max(vertices(:, 1));
-        %     maxY = max(vertices(:, 2));
-        %     maxZ = max(vertices(:, 3));
-            
-        %     minXYZ = [minX, minY, minZ];
-        %     maxXYZ = [maxX, maxY, maxZ];
-            
-        %     % Displaying the results
-        %     % fprintf('Min XYZ: [%f, %f, %f]\n', minXYZ);
-        %     % fprintf('Max XYZ: [%f, %f, %f]\n', maxXYZ);
-        % end
-        
-        
     end
 end
-
-
-
-
-% TODO 
-% 
-% add gripper     // lauren
-% add sword       // lauren
-% add collision   // Pk
-% add avoidance collision // pk 
-% 
-% hard code for ways point of the robot aims //Pk
-% 
-% 
-% 
-% configuration for gui  // lauren
-% 
-% code pseudo
-% 
-%     Start environment 
-%     show the life of the robot 
-%     pickup sword 
-%     start flighting until no more life left
-
-% in demonstration 
 
 
 
