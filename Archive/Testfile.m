@@ -154,6 +154,49 @@ function ObjectInTheScene = setupEnvironment()
     camlight;
 end
 
+function PlaceFloor(self, imageSize, img)
+    img = imread(img);
+    img = im2double(img);
+    if size(img, 3) == 3
+        img = rgb2gray(img);
+    end
+    % Define the size and position of the image
+    imageSize = imageSize;  % Size of the image (5x5 units)
+    [rows, cols] = size(img);
+    scaleFactorX = imageSize / cols;
+    scaleFactorY = imageSize / rows;
+    
+    % Create a scaled meshgrid
+    [X, Y] = meshgrid(linspace(-imageSize/2, imageSize/2, cols), linspace(-imageSize/2, imageSize/2, rows));
+    
+    % Set Z to zero for a flat surface
+    Z = zeros(size(X));
+    
+    % Plot the image
+    surf(X, Y, Z, img, 'FaceColor', 'texturemap', 'EdgeColor', 'none');
+end
+function PlaceWall(self, x,y,height,wallWidth,img, rotate)
+    % Read the image
+    img = imread(img);
+    img = im2double(img);  % Convert to double for texture mapping
+    % Define the wall dimensions and position
+    wallWidth = wallWidth;  % Width of the wall
+    wallHeight = height; % Height of the wall
+    wallPositionX = x; % X position of the wall
+    wallPositionY = y; % Y position of the wall
+    if rotate
+        % Create a meshgrid for the wall
+        [X, Z] = meshgrid(linspace(wallPositionX - wallWidth/2, wallPositionX + wallWidth/2, 100), linspace(0, wallHeight, 100));
+        Y = wallPositionY * ones(size(X)); % Y is constant as the wall is vertical
+    else
+        % Create a meshgrid for the wall
+        [Y, Z] = meshgrid(linspace(wallPositionY - wallWidth/2, wallPositionY + wallWidth/2, 100), linspace(0, wallHeight, 100));
+        X = wallPositionX * ones(size(Y)); % Y is constant as the wall is vertical
+    end
+    % Plot the wall
+    surf(X, Y, Z, img, 'FaceColor', 'texturemap', 'EdgeColor', 'none');  % Change 'blue' to any color you like
+end
+
 %% Setup Swords location base on hardcode location
 function [sword1, sword1_vertices, sword2, sword2_vertices] = setupSwords(swordfile1, swordfile2, sword1StartLoc, sword2StartLoc)
     sword1 = PlaceObject(swordfile1);
