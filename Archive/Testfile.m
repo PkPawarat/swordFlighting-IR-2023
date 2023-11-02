@@ -54,8 +54,8 @@ Preparepose{2} = [-pi/2 pi/2 -0 pi/3 0 0.5];
 
 %% Setup Robots
 robot = cell(1,2);
-% robot{1} = SetupRobot(baseRobot{1}, false);
-% robot{2} = SetupRobot(baseRobot{2}, true);
+robot{1} = SetupRobot(baseRobot{1}, false);
+robot{2} = SetupRobot(baseRobot{2}, true);
 
 % Setup Ellipsoid
 % robot = SetupEllipsoid(robot);
@@ -67,16 +67,16 @@ ObjectInTheScene = setupEnvironment();
 
 plotBoundingBox(ObjectInTheScene{1})
 plotBoundingBox(ObjectInTheScene{2})
-% pose = cell(1,2);
-% pose{1} = robot{1}.model.fkine(robot{1}.homeQ).T;
-% pose{2} = robot{2}.model.fkine(robot{2}.homeQ).T;
+pose = cell(1,2);
+pose{1} = robot{1}.model.fkine(robot{1}.homeQ).T;
+pose{2} = robot{2}.model.fkine(robot{2}.homeQ).T;
 
 
 
 %% Interleave the operations of robot1 and robot2
     pickupSwordsStep(robot, swordStartLoc, swords, sword_vertices, steps);
    %%
-    PreparePoses(robot, Preparepose, swords, sword_vertices, steps);
+    a=PreparePoses(robot, Preparepose, swords, sword_vertices, steps);
     %%
     collision = MoveRobotToLocation(robot, pose1, swords, sword_vertices, steps);
     if collision
