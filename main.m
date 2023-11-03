@@ -18,7 +18,9 @@ classdef main
 
         % setup each link
         links = [];
-
+        t;
+        object;
+        object_vertices;
         % Setup robot pose
         PickupPose = {[-0.4590 0 0.8295 -1.9506 -0.1776 0 -pi/1.5], [1.9220 2.1520 2.4021 0.0187 0.0187 -3.4]}
         pose = cell(1,2);
@@ -28,7 +30,11 @@ classdef main
         % Setup Swords
         swords = cell(1,2);
         sword_vertices = cell(1,2);
-        
+        box_planes;
+        box_center; % The center of the box
+        box_width; % Width of the box
+        box_height; % Height of the box
+        box_depth; % Depth of the box
         
         %% ****************************** Prepare to fight pose need to be hard code but it need to be adjust later on *********************************************
         Preparepose = {[-0.4 0 0 0 0 0 -pi/2], [-pi/2 pi/2 1.3 0 0 0.26]};
@@ -65,6 +71,7 @@ classdef main
             hold on;
             axis([-3 3 -3 3 0 3]);
             camlight;
+            self.t = linspace(-15, 10, self.steps);
             
             %% Setup Swords
             [self.swords{1}, self.sword_vertices{1}, self.swords{2}, self.sword_vertices{2}] = self.setupSwords(self.swordfile{1}, self.swordfile{2}, self.swordStartLoc{1}, self.swordStartLoc{2});
@@ -79,7 +86,7 @@ classdef main
             %% Setup Ellipsoid
             self.robots = self.SetupEllipsoid(self.robots);            
             %% Setup Environment
-            self.ObjectInTheScene = self.SetupEnvironment();
+            self = self.SetupEnvironment();
             [objectVertices] = self.UpdateObjectsVertices(self.ObjectInTheScene);
             %% plot bounding box
             % self.plotBoundingBox(objectVertices{1});
@@ -93,7 +100,9 @@ classdef main
             % self.DisplayAllPossiblePositionAndWorkspace('logs file/PositionUR5CanDo.txt');
             % 
             %% Execution 
-            self.Execution();
+            % self.Execution();
+            % self.demonstrateIntersection(); 
+            [self.gripper,collision] = self.MoveRobotToLocation(self.robots, self.Preparepose, self.swords, self.sword_vertices, self.steps, false, true);
             
         end
 
@@ -125,7 +134,7 @@ classdef main
         end
 
         %% Setup Environment of the scene 
-        function Object = SetupEnvironment(self)
+        function self = SetupEnvironment(self)
             hold on;
             self.PlaceFloor(20, 'Images/floor.jpg');
             self.PlaceWall(0,6,4,15,'Images/KendoClub1.jpg', true);
@@ -154,18 +163,20 @@ classdef main
             view(3);
 
             % Parameters for the box
-            box_center = [0, 1, 0]; % The center of the box
-            box_width = 4; % Width of the box
-            box_height = 6; % Height of the box
-            box_depth = 4; % Depth of the box
+            self.box_center = [0, 1, 0]; % The center of the box
+            self.box_width = 4; % Width of the box
+            self.box_height = 6; % Height of the box
+            self.box_depth = 4; % Depth of the box
             
             % Create the box
-            box_planes = self.createBox(box_center, box_width, box_height, box_depth);
+            self.box_planes = self.createBox(self.box_center, self.box_width, self.box_height, self.box_depth);
             
+            self.object = PlaceObject('Star_wars_JAWA.ply');
+            self.object_vertices = get(self.object,'Vertices');
             % Plot the planes of the box
             colors = ['r', 'g', 'b', 'y']; % Different color for each plane
             for i = 1:4
-                surf(box_planes(i).x_grid, box_planes(i).y_grid, box_planes(i).z_grid, ...
+                surf(self.box_planes(i).x_grid, self.box_planes(i).y_grid, self.box_planes(i).z_grid, ...
                      'FaceColor', colors(i), 'FaceAlpha', 0.5);
                 hold on;
             end
@@ -280,8 +291,6 @@ classdef main
                 self.MoveSwords(robot, sword, vertices);
                 pause(0.001);
             end
-            % self.gripper = self.DeleteGrip(self.gripper);
-            % gripper = self.gripper;
         end
 
         function [self,collision] = PreparePoses(self, robots, locations, swords, swordVertices, steps)
@@ -289,13 +298,15 @@ classdef main
         end
 
         %% Move the robot base on end-effector from 'location', update swords location and checking collision between robot parts itself.
-        function [gripper,collision] = MoveRobotToLocation(self, robots, locations, swords, swordVertices, steps, PassCollision)
+        function [gripper,collision] = MoveRobotToLocation(self, robots, locations, swords, swordVertices, steps, PassCollision, lineIntersect)
             % GripOpen = false;
             collision = false;
             gripper = [];
             if nargin < 7			
                 PassCollision = true;		
-        		
+            end
+            if nargin < 8
+                lineIntersect = false;
             end
 
             qMatrix = cell(1, length(robots));
@@ -349,7 +360,18 @@ classdef main
                         return;
                     end
                 end
+                
                 %% ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+                j = s;
+                if lineIntersect == true
+                    checkIntersect = self.demonstrateIntersection(s);
+                    while(checkIntersect == true)
+                        j = j + 1;
+                        checkIntersect = self.demonstrateIntersection(j);
+                    end
+                end
+                %% ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
             end
         end
 
@@ -389,8 +411,6 @@ classdef main
                 return;  
             end
             robotPose = robot.model.fkine(robot.model.getpos).T * trotz(90, 'deg');
-            % transformedVertices = [swordVertices, ones(size(swordVertices,1),1)] * robotPose';
-            % set(sword,'Vertices',transformedVertices(:,1:3));
             
             % Create a homogeneous transformation matrix for rotation
             rotationMatrix = robotPose;            
@@ -467,11 +487,6 @@ classdef main
                 end
                 robots{i} = robot;
             end
-            % workspace_limits = [-2 3 -1 2 -0 3]; % Example limits, adjust as needed
-            % robots{1}.model.plot3d(robots{1}.model.getpos, 'workspace', workspace_limits);
-            % robots{2}.model.plot3d(robots{2}.model.getpos, 'workspace', workspace_limits);
-            % axis(workspace_limits);
-            % view(3)
 
         end
 
@@ -907,7 +922,26 @@ classdef main
             end 
         end
 
-        function [x_grid, y_grid, z_grid] = createPlane(self,point, width, height)
+        %% intersection section
+
+        function lineIntersect = demonstrateIntersection(self, i)
+            % Parameters for the box
+            lineIntersect = false;
+            tr = transl([self.t(i), 0, 0]); %x,y,z
+            transformedVertices = [self.object_vertices, ones(size(self.object_vertices,1),1)] * tr';
+            set(self.object,'Vertices',transformedVertices(:,1:3));
+            
+            % Check for intersection with the box
+            if self.checkInsideBox(transformedVertices(:,1:3), self.box_center, self.box_width, self.box_height, self.box_depth)
+                disp('OBJECT INSIDE THE BOXXXXXX')
+                lineIntersect = true;
+                pause(1);
+            end                
+            pause(0.01);
+            
+        end
+
+        function [x_grid, y_grid, z_grid] = createPlane(self, point, width, height)
             % point: A 1x3 vector [x, y, z] representing a point on the plane
             % width: The width of the plane along the X-axis
             % height: The height of the plane along the Y-axis
@@ -920,7 +954,7 @@ classdef main
             y_grid = y_grid + point(2);
             z_grid = z_grid + point(3);
         end
-        function intersect_point = lineIntersection(self,obj_start, obj_direction, plane_x)
+        function intersect_point = lineIntersection(self, obj_start, obj_direction, plane_x)
             % obj_start: A 1x3 vector [x, y, z] representing the starting point of the line
             % obj_direction: A 1x3 vector [dx, dy, dz] representing the direction of the line
             % plane_x: The x-coordinate of the vertical plane
@@ -931,64 +965,14 @@ classdef main
             % Calculate the intersection point
             intersect_point = obj_start + t_intersect * obj_direction;
         end
-        % function [planes] = createBox(self,center, width, height, depth)
-        %     % center: A 1x3 vector [x, y, z] representing the center of the box
-        %     % width: The width of the box along the X-axis
-        %     % height: The height of the box along the Y-axis
-        %     % depth: The depth of the box along the Z-axis
-        %     hold on;
-        %     % Initialize the planes structure
-        %     planes = struct('x_grid', [], 'y_grid', [], 'z_grid', []);
-        % 
-        %     % Half-dimensions
-        %     halfWidth = width / 2;
-        %     halfHeight = height / 2;
-        %     halfDepth = depth / 2;
-        % 
-        %     % Define the grid for each plane
-        %     [y_grid, z_grid] = meshgrid(linspace(-halfHeight, halfHeight, 10), linspace(-halfDepth, halfDepth, 10));
-        % 
-        %     % Front plane (x is constant)
-        %     planes(1).x_grid = (center(1) + halfWidth) * ones(size(y_grid));
-        %     planes(1).y_grid = y_grid + center(2);
-        %     planes(1).z_grid = z_grid + center(3);
-        % 
-        %     % surf(planes(1).x_grid, planes(1).y_grid, planes(1).z_grid, ...
-        %     %      'FaceColor', 'r', 'FaceAlpha', 0.5);
-        % 
-        %     % Back plane (x is constant)
-        %     planes(2).x_grid = (center(1) - halfWidth) * ones(size(y_grid));
-        %     planes(2).y_grid = y_grid + center(2);
-        %     planes(2).z_grid = z_grid + center(3);
-        % 
-        %     % surf(planes(2).x_grid, planes(2).y_grid, planes(2).z_grid, ...
-        %     %      'FaceColor', 'r', 'FaceAlpha', 0.5);
-        % 
-        %     % Left plane (y is constant)
-        %     planes(3).y_grid = (center(2) - halfHeight) * ones(size(z_grid));
-        %     planes(3).x_grid = z_grid + center(1); % z_grid reused for x since y is constant
-        %     planes(3).z_grid = y_grid + center(3); % y_grid reused for z
-        % 
-        %     % surf(planes(3).x_grid, planes(3).y_grid, planes(3).z_grid, ...
-        %     %      'FaceColor', 'r', 'FaceAlpha', 0.5);
-        % 
-        %     % Right plane (y is constant)
-        %     planes(4).y_grid = (center(2) + halfHeight) * ones(size(z_grid));
-        %     planes(4).x_grid = z_grid + center(1); % z_grid reused for x since y is constant
-        %     planes(4).z_grid = y_grid + center(3); % y_grid reused for z
-        % 
-        %     % surf(planes(4).x_grid, planes(4).y_grid, planes(4).z_grid, ...
-        %     %      'FaceColor', 'r', 'FaceAlpha', 0.5);
-        % 
-        % end
         function [planes] = createBox(self, center, width, height, depth)
             % center: A 1x3 vector [x, y, z] representing the center of the box
             % width: The width of the box along the X-axis
             % height: The height of the box along the Y-axis
             % depth: The depth of the box along the Z-axis
-            
-            % Initialize the planes array
-            planes = struct('x_grid', {}, 'y_grid', {}, 'z_grid', {});
+            hold on;
+            % Initialize the planes structure
+            planes = struct('x_grid', [], 'y_grid', [], 'z_grid', []);
             
             % Half-dimensions
             halfWidth = width / 2;
@@ -997,40 +981,29 @@ classdef main
             
             % Define the grid for each plane
             [y_grid, z_grid] = meshgrid(linspace(-halfHeight, halfHeight, 10), linspace(-halfDepth, halfDepth, 10));
-            [x_grid, z_grid_x] = meshgrid(linspace(-halfWidth, halfWidth, 10), linspace(-halfDepth, halfDepth, 10));
             
             % Front plane (x is constant)
-            planes(end+1) = struct('x_grid', (center(1) + halfWidth) * ones(size(y_grid)), ...
-                                    'y_grid', y_grid + center(2), ...
-                                    'z_grid', z_grid + center(3));
+            planes(1).x_grid = (center(1) + halfWidth) * ones(size(y_grid));
+            planes(1).y_grid = y_grid + center(2);
+            planes(1).z_grid = z_grid + center(3);
             
             % Back plane (x is constant)
-            planes(end+1) = struct('x_grid', (center(1) - halfWidth) * ones(size(y_grid)), ...
-                                    'y_grid', y_grid + center(2), ...
-                                    'z_grid', z_grid + center(3));
+            planes(2).x_grid = (center(1) - halfWidth) * ones(size(y_grid));
+            planes(2).y_grid = y_grid + center(2);
+            planes(2).z_grid = z_grid + center(3);
             
             % Left plane (y is constant)
-            planes(end+1) = struct('x_grid', x_grid + center(1), ...
-                                    'y_grid', (center(2) - halfHeight) * ones(size(x_grid)), ...
-                                    'z_grid', z_grid_x + center(3));
+            planes(3).y_grid = (center(2) - halfHeight) * ones(size(z_grid));
+            planes(3).x_grid = z_grid + center(1); % z_grid reused for x since y is constant
+            planes(3).z_grid = y_grid + center(3); % y_grid reused for z
             
             % Right plane (y is constant)
-            planes(end+1) = struct('x_grid', x_grid + center(1), ...
-                                    'y_grid', (center(2) + halfHeight) * ones(size(x_grid)), ...
-                                    'z_grid', z_grid_x + center(3));
-            
-            % Top plane (z is constant)
-            planes(end+1) = struct('x_grid', x_grid + center(1), ...
-                                    'y_grid', y_grid + center(2), ...
-                                    'z_grid', (center(3) + halfDepth) * ones(size(x_grid)));
-            
-            % Bottom plane (z is constant)
-            planes(end+1) = struct('x_grid', x_grid + center(1), ...
-                                    'y_grid', y_grid + center(2), ...
-                                    'z_grid', (center(3) - halfDepth) * ones(size(x_grid)));
+            planes(4).y_grid = (center(2) + halfHeight) * ones(size(z_grid));
+            planes(4).x_grid = z_grid + center(1); % z_grid reused for x since y is constant
+            planes(4).z_grid = y_grid + center(3); % y_grid reused for z
+        
         end
-
-        function isInside = checkInsideBox(self,point, box_center, width, height, depth)
+        function isInside = checkInsideBox(self, point, box_center, width, height, depth)
             % Check if a point is inside the given box
             halfWidth = width / 2;
             halfHeight = height / 2;
@@ -1043,9 +1016,6 @@ classdef main
                        point(3) >= (box_center(3) - halfDepth) && ...
                        point(3) <= (box_center(3) + halfDepth);
         end
-
-
-
     end
 end
 

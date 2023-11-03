@@ -1,6 +1,3 @@
-
-
-
 clc;
 clf;
 
@@ -38,24 +35,33 @@ obj_start = [-15, 0, 0];
 obj_direction = [10, 0, 0];
 
 % Parameter t for the line equation
-t = linspace(-20, 20, 400);
+t = linspace(-15, 10, 400);
+object = PlaceObject('Star_wars_JAWA.ply');
+object_vertices = get(object,'Vertices');
+
+tr = transl([-20, 0, 0]); %x,y,z
+transformedVertices = [object_vertices, ones(size(object_vertices,1),1)] * tr';
+set(object,'Vertices',transformedVertices(:,1:3));
 
 % Animate the object
 for i = 1:length(t)
     % Calculate the current point on the object's trajectory
-    point = obj_start + t(i) * obj_direction;                               % IN THE MAIN we can you vertices as point 
-    
+    % point = obj_start + t(i) * obj_direction;                               % IN THE MAIN we can you vertices as point 
+    tr = transl([t(i), 0, 0]); %x,y,z
+    transformedVertices = [object_vertices, ones(size(object_vertices,1),1)] * tr';
+    set(object,'Vertices',transformedVertices(:,1:3));
+    % point = [transformedVertices(1, 4),transformedVertices(2, 4),transformedVertices(3, 4)]
     % Plot the object's current position        
-    h = plot3(point(1), point(2), point(3), 'ko', 'MarkerFaceColor', 'k');
+    % h = plot3(point(1), point(2), point(3), 'ko', 'MarkerFaceColor', 'k');
     
     % Check for intersection with the box
-    if checkInsideBox(point, box_center, box_width, box_height, box_depth)
-        set(h, 'MarkerEdgeColor', 'g', 'MarkerFaceColor', 'g'); % Change color to green if inside the box
+    if checkInsideBox(transformedVertices(:,1:3), box_center, box_width, box_height, box_depth)
+        % set(h, 'MarkerEdgeColor', 'g', 'MarkerFaceColor', 'g'); % Change color to green if inside the box
         disp('OBJECT INSIDE THE BOXXXXXX')
         pause(0.01);
 
-    else
-        set(h, 'MarkerEdgeColor', 'k', 'MarkerFaceColor', 'k'); % Keep color black if outside the box
+    % else
+    %     set(h, 'MarkerEdgeColor', 'k', 'MarkerFaceColor', 'k'); % Keep color black if outside the box
         % disp('OBJECT OUTSIDE THE BOXXXXXX')
     end
     
