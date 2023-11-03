@@ -44,7 +44,9 @@ classdef main
         
         % Object in the scence that are 3D models
         ObjectInTheScene=[];
-
+        
+        robot_1_q;
+        robot_2_q;
         
         Grip1;
         Grip2;
