@@ -14,12 +14,15 @@ classdef main
         
         swordStartLoc = {[-0.4 -0.5 0.5], [-0.4 1.55 0.5]};
         
-        steps = 50;
+        steps = 20;
 
         % setup each link
         links = [];
-
+        t;
+        object;
+        object_vertices;
         % Setup robot pose
+        PickupPose = {[-0.4590 0 0.8295 -1.9506 -0.1776 0 -pi/1.5], [1.9220 2.1520 2.4021 0.0187 0.0187 -3.4]}
         pose = cell(1,2);
         pose1 = {transl([0 1 1]) * troty(0, 'deg'), transl([0 0 1]) * trotz(0, 'deg')};
         pose2 = cell(1,2);
@@ -27,7 +30,11 @@ classdef main
         % Setup Swords
         swords = cell(1,2);
         sword_vertices = cell(1,2);
-        
+        box_planes;
+        box_center; % The center of the box
+        box_width; % Width of the box
+        box_height; % Height of the box
+        box_depth; % Depth of the box
         
         %% ****************************** Prepare to fight pose need to be hard code but it need to be adjust later on *********************************************
         Preparepose = {[-0.4 0 0 0 0 0 -pi/2], [-pi/2 pi/2 1.3 0 0 0.26]};
@@ -39,18 +46,21 @@ classdef main
                     {[0 0.2797 -0.3640 0 -1.1375 1.5761 -1.8507], [-2.3562 2.2048 2.1457 0.7330 0.8378 2.3562]}
 
                     }
-        % Preparepose{1} = [-0.4 0 0 0 0 0 -pi/2];
-        % Preparepose{2} = [-pi/2 pi/2 -0 pi/3 0 0.5];
-        
+
         % Object in the scence that are 3D models
         ObjectInTheScene=[];
-
         
+        robot_1_q;
+        robot_2_q;
+        
+
+        gripper = zeros(2,3);
         Grip1;
         Grip2;
         GripDegree = 45;
 
         advance = false;            % set advance to true if want to turn on GUI
+        TurnOnGripper = false;
     end
     
     methods
@@ -61,16 +71,22 @@ classdef main
             hold on;
             axis([-3 3 -3 3 0 3]);
             camlight;
+            self.t = linspace(-15, 10, self.steps);
             
             %% Setup Swords
             [self.swords{1}, self.sword_vertices{1}, self.swords{2}, self.sword_vertices{2}] = self.setupSwords(self.swordfile{1}, self.swordfile{2}, self.swordStartLoc{1}, self.swordStartLoc{2});
             %% Setup Robots
             self.robots{1} = self.SetupRobot(self.baseRobot{1}, false);
             self.robots{2} = self.SetupRobot(self.baseRobot{2}, true);
+            %% Setup Gripper
+            if self.TurnOnGripper
+                self.gripper(1,:) = self.CreateGrip(self.gripper(1,:),self.robots{1});
+                self.gripper(2,:) = self.CreateGrip(self.gripper(2,:),self.robots{2});
+            end
             %% Setup Ellipsoid
             self.robots = self.SetupEllipsoid(self.robots);            
             %% Setup Environment
-            self.ObjectInTheScene = self.SetupEnvironment();
+            self = self.SetupEnvironment();
             [objectVertices] = self.UpdateObjectsVertices(self.ObjectInTheScene);
             %% plot bounding box
             % self.plotBoundingBox(objectVertices{1});
@@ -79,32 +95,28 @@ classdef main
             self.pose = cell(1,2);
             self.pose{1} = self.robots{1}.model.fkine(self.robots{1}.homeQ).T;
             self.pose{2} = self.robots{2}.model.fkine(self.robots{2}.homeQ).T;
-
-            %% Setup Gripper
-            % [R1grip_1, R1grip_2] = self.makeEndEffector();
-            % [R2grip_1, R2grip_2] = self.makeEndEffector();
-            % self.grip_{1} = [R1grip_1, R1grip_2];
-            % self.grip_{2} = [R2grip_1, R2grip_2];
-
-
+            
             % self.DisplayAllPossiblePositionAndWorkspace('logs file/FanucM20.txt');
             % self.DisplayAllPossiblePositionAndWorkspace('logs file/PositionUR5CanDo.txt');
             % 
             %% Execution 
-            self.Execution();
+            % self.Execution();
+            % self.demonstrateIntersection(); 
+            [self.gripper,collision] = self.MoveRobotToLocation(self.robots, self.Preparepose, self.swords, self.sword_vertices, self.steps, false, true);
             
         end
 
         function Execution(self)
             % pickup the sword
-            self.pickupSwordsStep(self.robots, self.swordStartLoc, self.swords, self.sword_vertices, self.steps);
+            
+            [self.gripper,collision] = self.pickupSwordsStep(self.robots, self.PickupPose, self.swords, self.sword_vertices, self.steps);
             % Prepare the to fight 
-            self.PreparePoses(self.robots, self.Preparepose, self.swords, self.sword_vertices, self.steps);
+            [self.gripper,collision] = self.MoveRobotToLocation(self.robots, self.Preparepose, self.swords, self.sword_vertices, self.steps, false);
             % Start random pose to fighting
             for i = 1:length(self.DemoPose)
                 Pose = self.DemoPose{i};
-                self.MoveRobotToLocation(self.robots, Pose, self.swords, self.sword_vertices, self.steps);
-                self.PreparePoses(self.robots, self.Preparepose, self.swords, self.sword_vertices, self.steps);
+                [self.gripper,collision] = self.MoveRobotToLocation(self.robots, Pose, self.swords, self.sword_vertices, self.steps);
+                [self.gripper,collision] = self.MoveRobotToLocation(self.robots, self.Preparepose, self.swords, self.sword_vertices, self.steps, false);
             end
            
         end
@@ -122,7 +134,7 @@ classdef main
         end
 
         %% Setup Environment of the scene 
-        function Object = SetupEnvironment(self)
+        function self = SetupEnvironment(self)
             hold on;
             self.PlaceFloor(20, 'Images/floor.jpg');
             self.PlaceWall(0,6,4,15,'Images/KendoClub1.jpg', true);
@@ -140,16 +152,39 @@ classdef main
             PlaceObject('model3D/Star_wars_JAWA.ply', [0,5,0]);
             PlaceObject('model3D/Star_wars_JAWA.ply', [1,5,0]);
             PlaceObject('model3D/Star_wars_JAWA.ply', [2,5,0]);
-            PlaceObject('model3D/TABLER~1.PLY', [0,4,0]);
-            PlaceObject('model3D/fireExtinguisher.ply', [1,4,0]);
-            PlaceObject('model3D/emergencyStopButton.ply', [-0.2,4,0.25]);
+            PlaceObject('model3D/TABLER~1.PLY', [0,4.5,0]);
+            PlaceObject('model3D/fireExtinguisher.ply', [1,4.5,0]);
+            PlaceObject('model3D/emergencyStopButton.ply', [-0.2,4.5,0.25]);
             PlaceObject('model3D/Traffic Cone.ply', [-2,3.5,0]);
             PlaceObject('model3D/Traffic Cone.ply', [2,3.5,0]);
             PlaceObject('model3D/Traffic Cone.ply', [-2,-2,0]);
             PlaceObject('model3D/Traffic Cone.ply', [2,-2,0]);
 
             view(3);
-            axis([-6 6 -6 6 -0.1 4]);
+
+            % Parameters for the box
+            self.box_center = [0, 1, 0]; % The center of the box
+            self.box_width = 4; % Width of the box
+            self.box_height = 6; % Height of the box
+            self.box_depth = 4; % Depth of the box
+            
+            % Create the box
+            self.box_planes = self.createBox(self.box_center, self.box_width, self.box_height, self.box_depth);
+            
+            self.object = PlaceObject('Star_wars_JAWA.ply');
+            self.object_vertices = get(self.object,'Vertices');
+            % Plot the planes of the box
+            colors = ['r', 'g', 'b', 'y']; % Different color for each plane
+            for i = 1:4
+                surf(self.box_planes(i).x_grid, self.box_planes(i).y_grid, self.box_planes(i).z_grid, ...
+                     'FaceColor', colors(i), 'FaceAlpha', 0.5);
+                hold on;
+            end
+
+
+
+            axis([-3.5 5 -3.5 6 -0.1 4]);
+            % axis([-3 3 -3 3 0.1 4]);
             camlight;
         end
         function PlaceFloor(self, imageSize, img)
@@ -243,38 +278,35 @@ classdef main
         end
        
         %% This function is initial function for the robot to pickup swords and return the pose to prepare pose
-        function collision = pickupSwordsStep(self, robots, locations, swords, swordVertices, steps)
-            collision = self.MoveRobotToLocation(robots, locations, [], swordVertices, steps, true);
+        function [gripper,collision] = pickupSwordsStep(self, robots, locations, swords, swordVertices, steps)
+            [gripper,collision] = self.MoveRobotToLocation(robots, locations, [], swordVertices, steps, true);
+            if self.TurnOnGripper
+                gripper(1,:) = self.GridGripping(gripper(1,:), robots{1}, true);
+                gripper(2,:) = self.GridGripping(gripper(2,:), robots{2}, true);
+            end
             for i = 1:length(robots)
                 robot = robots{i};
                 sword = swords{i};
                 vertices = swordVertices{i};
                 self.MoveSwords(robot, sword, vertices);
                 pause(0.001);
-            end
-            for i=1:length(self.grip_)
-                gripper = self.grip_{i};
-                % self.closeEndEffector(gripper(1), gripper(2));
             end
         end
 
-        function collision = PreparePoses(self, robots, locations, swords, swordVertices, steps)
-            self.MoveRobotToLocation(robots, locations, swords, swordVertices, steps, false);
-            for i = 1:length(robots)
-                robot = robots{i};
-                sword = swords{i};
-                vertices = swordVertices{i};
-                self.MoveSwords(robot, sword, vertices);
-                pause(0.001);
-            end
+        function [self,collision] = PreparePoses(self, robots, locations, swords, swordVertices, steps)
+            [self.gripper,collision] = MoveRobotToLocation(robots, locations, swords, swordVertices, steps, false);
         end
 
         %% Move the robot base on end-effector from 'location', update swords location and checking collision between robot parts itself.
-        function collision = MoveRobotToLocation(self, robots, locations, swords, swordVertices, steps, PassCollision, GripOpen)
-            GripOpen = false;
+        function [gripper,collision] = MoveRobotToLocation(self, robots, locations, swords, swordVertices, steps, PassCollision, lineIntersect)
+            % GripOpen = false;
+            collision = false;
+            gripper = [];
             if nargin < 7			
                 PassCollision = true;		
-        		
+            end
+            if nargin < 8
+                lineIntersect = false;
             end
 
             qMatrix = cell(1, length(robots));
@@ -291,9 +323,7 @@ classdef main
                     sword = [];
                     if ~isempty(swords)
                         sword = swords{i};
-                    end
-                    vertices = swordVertices{i};
-                    
+                    end                    
                     try 
                         robot.model.animate(qMatrix{i}(s,:)); 
                     catch 
@@ -301,24 +331,26 @@ classdef main
                         disp('Unable to move in this matrix : ');
                         display(qMatrix{i}(s,:));
                     end
+                    vertices = swordVertices{i};
                     self.MoveSwords(robot, sword, vertices);
-                    base_pose_endEffector = robot.model.fkine(robot.model.getpos);
-                    grip = self.grip_{i};
-                    % self.moveEndEffector(base_pose_endEffector.T, grip(1), grip(2), GripOpen);
                     pause(0.001);
                 end
-
+                if self.TurnOnGripper
+                    self.gripper(1,:) = self.SetupGrip(self.gripper(1,:),self.robots{1});
+                    self.gripper(2,:) = self.SetupGrip(self.gripper(2,:),self.robots{2});
+                    gripper = self.gripper;
+                end
                 %% this may need to be in the CheckCollision ////////////////////////////////////////////////////////
                 if PassCollision
-                    [self.sword_vertices] = self.UpdateObjectsVertices(self.swords);
-                    isColliding = self.checkObjectsCollision(self.sword_vertices{1}, self.sword_vertices{2});
+                    [sword_vertices] = self.UpdateObjectsVertices(self.swords);
+                    isColliding = self.checkObjectsCollision(sword_vertices{1}, sword_vertices{2});
                     if isColliding
                         collision = true;
                         disp('Swords collide')
                         return;
                     end
     
-                    [collision,swordCollide] = self.CheckCollision(robots{1}, robots{2}, self.sword_vertices);
+                    [collision,swordCollide] = self.CheckCollision(robots{1}, robots{2}, sword_vertices);
                     if collision
                         % if the robot part is collition stop the robot immediately
                         disp('STOP All systems, the robot parts have collide.')
@@ -328,7 +360,18 @@ classdef main
                         return;
                     end
                 end
+                
                 %% ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+                j = s;
+                if lineIntersect == true
+                    checkIntersect = self.demonstrateIntersection(s);
+                    while(checkIntersect == true)
+                        j = j + 1;
+                        checkIntersect = self.demonstrateIntersection(j);
+                    end
+                end
+                %% ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
             end
         end
 
@@ -368,8 +411,15 @@ classdef main
                 return;  
             end
             robotPose = robot.model.fkine(robot.model.getpos).T * trotz(90, 'deg');
-            transformedVertices = [swordVertices, ones(size(swordVertices,1),1)] * robotPose';
-            set(sword,'Vertices',transformedVertices(:,1:3));
+            
+            % Create a homogeneous transformation matrix for rotation
+            rotationMatrix = robotPose;            
+            % Get the object's vertices
+            vertices = get(sword, 'Vertices');
+            % Apply the rotation transformation to the object's vertices
+            transformedVertices = (rotationMatrix * [swordVertices, ones(size(swordVertices, 1), 1)]')';
+            % Update the object's vertices with the rotated vertices
+            set(sword, 'Vertices', transformedVertices(:, 1:3));
         end
 
         function RotateObject(self, object, transformMatrix)
@@ -437,11 +487,6 @@ classdef main
                 end
                 robots{i} = robot;
             end
-            % workspace_limits = [-2 3 -1 2 -0 3]; % Example limits, adjust as needed
-            % robots{1}.model.plot3d(robots{1}.model.getpos, 'workspace', workspace_limits);
-            % robots{2}.model.plot3d(robots{2}.model.getpos, 'workspace', workspace_limits);
-            % axis(workspace_limits);
-            % view(3)
 
         end
 
@@ -759,53 +804,12 @@ classdef main
             % Display collected data points
             % figure;
             check = plot3(data(:,1),data(:,2),data(:,3),'r.');
-            % display('Press enter to continue calculation of workspace')
-            % pause();
-            % xlabel('X');
-            % ylabel('Y');
-            % zlabel('Z');
-            % title('Collected Data Points');
-            % 
-            % % Calculate workspace radius and volume
-            % min_x = min(data(:,1))
-            % max_x = max(data(:,1))
-            % min_y = min(data(:,2))
-            % max_y = max(data(:,2))
-            % min_z = min(data(:,3))
-            % max_z = max(data(:,3))
-            % 
-            % % Calculate workspace radius
-            % workspace_radius = max(sqrt(max_x^2 + max_y^2 + max_z^2), sqrt(min_x^2 + min_y^2 + min_z^2));
-            % 
-            % % Calculate workspace volume (using Monte Carlo sampling)
-            % num_samples = length(data);
-            % sample_points = [rand(num_samples, 1)*(max_x-min_x)+min_x, ...
-            %                  rand(num_samples, 1)*(max_y-min_y)+min_y, ...
-            %                  rand(num_samples, 1)*(max_z-min_z)+min_z];
-            % points_inside_workspace = sum(sample_points(:,1).^2 + sample_points(:,2).^2 + sample_points(:,3).^2 <= workspace_radius^2);
-            % workspace_volume = points_inside_workspace / num_samples * (max_x-min_x) * (max_y-min_y) * (max_z-min_z);
-            % 
-            % % Calculate and display maximum reach
-            % max_reach = max(sqrt(max_x^2 + max_y^2 + max_z^2), sqrt(min_x^2 + min_y^2 + min_z^2));
-            % 
-            % % Display minimum and maximum values for X, Y, and Z coordinates
-            % fprintf('Minimum X: %.4f\n m', min_x);
-            % fprintf('Maximum X: %.4f\n m', max_x);
-            % fprintf('Minimum Y: %.4f\n m', min_y);
-            % fprintf('Maximum Y: %.4f\n m', max_y);
-            % fprintf('Minimum Z: %.4f\n m', min_z);
-            % fprintf('Maximum Z: %.4f\n m', max_z);
-            % 
-            % % Display workspace radius and volume
-            % fprintf('Workspace Radius: %.4f m\n ', workspace_radius);
-            % fprintf('Workspace Volume: %.4f m^3\n', workspace_volume);
-            % fprintf('Maximum Reach: %.4f\n m', max_reach);
-            % 
-            % display('Press enter to delete this plot spaces')
-            % pause();
-            % try delete(check); end
+            display('Press enter to delete this plot spaces')
+            pause();
+            try delete(check); end
         end
 
+        %% Gripper //////////////////////////////////////////
         %% Move end effector grippers
         function moveEndEffector(self, base_pos, grip_1, grip_2, end_effector_open)
             grip_1.base = base_pos*trotx(pi/2)*transl(0.035,0,0);
@@ -838,6 +842,7 @@ classdef main
                 grip_2.animate(i);
             end
         end
+        
         function [grip_1, grip_2] = makeEndEffector(self, name)
             % Define DH parameters for gripper 1
             L1 = Link('d',0, 'a', 0.04, 'alpha', 0, 'qlim',[0 pi/2]);
@@ -853,36 +858,164 @@ classdef main
             grip_2.plot(q);
         end
 
+        % Gripper //////////////////////////////////////////
+        function gripper = CreateGrip(self, gripper,robot)
+            pose = robot.model.fkine(robot.model.getpos).T;
+            gripper(1) = self.DeleteObject(gripper(1));
+            gripper(2) = self.DeleteObject(gripper(2));
+            gripper(1) = PlaceObject('model3D/Newhand.ply');
+            gripper(2) = PlaceObject('model3D/Newhand2.ply');
+            gripper(3) = 45;
+            % need to set z of end-effector to have offset in z about 0.0859
+            self.RotateObjectgGripper(gripper(1), [0,0,0], pose * trotz(180, 'deg') * trotx(-gripper(3), 'deg'));
+            self.RotateObjectgGripper(gripper(2), [0,0,0], pose * trotz(180, 'deg') * trotx(gripper(3), 'deg'));
+        end
+        function gripper = SetupGrip(self, gripper,robot)
+            pose = robot.model.fkine(robot.model.getpos).T;
+            gripper(1) = self.DeleteObject(gripper(1));
+            gripper(2) = self.DeleteObject(gripper(2));
+            gripper(1) = PlaceObject('model3D/Newhand.ply');
+            gripper(2) = PlaceObject('model3D/Newhand2.ply');
+            % need to set z of end-effector to have offset in z about 0.0859
+            self.RotateObjectgGripper(gripper(1), [0,0,0], pose * trotz(180, 'deg') * trotx(-gripper(3), 'deg'));
+            self.RotateObjectgGripper(gripper(2), [0,0,0], pose * trotz(180, 'deg') * trotx(gripper(3), 'deg'));
+        end
+        function gripper = DeleteGrip(self, gripper)
+            gripper(1) = self.DeleteObject(gripper(1));
+            gripper(2) = self.DeleteObject(gripper(2));
+        end
+        function obj = DeleteObject(self, obj)
+            try
+                delete(obj);
+            end
+        end
 
+        function RotateObjectgGripper (self, gripper,location, degree)
+            % Define the rotation angle in degrees (e.g., 180 degrees)
+            rotationAngleDegrees = degree;
+            % Create a homogeneous transformation matrix for rotation
+            rotationMatrix = transl(location) * rotationAngleDegrees;            
+            % Get the object's vertices
+            vertices = get(gripper, 'Vertices');
+            % Apply the rotation transformation to the object's vertices
+            transformedVertices = (rotationMatrix * [vertices, ones(size(vertices, 1), 1)]')';
+            % Update the object's vertices with the rotated vertices
+            set(gripper, 'Vertices', transformedVertices(:, 1:3));
+        end
+       
+        function gripper = GridGripping(self, gripper, robot, setGrip)   % true if grip, false ungrip
+            for i = 1:30
+                if setGrip
+                    gripper(3) = gripper(3) - 1;
+                else
+                    gripper(3) = gripper(3) + 1;
+                end
+                pose = robot.model.fkine(robot.model.getpos).T;
+                % Degree = Degree - 1;
+                gripper(1) = self.DeleteObject(gripper(1));
+                gripper(2) = self.DeleteObject(gripper(2));
+                gripper(1) = PlaceObject('model3D/Newhand.ply');
+                gripper(2) = PlaceObject('model3D/Newhand2.ply');
+                self.RotateObjectgGripper(gripper(1), [0,0,0], pose * trotz(180, 'deg') * trotx(-gripper(3), 'deg'))
+                self.RotateObjectgGripper(gripper(2), [0,0,0], pose * trotz(180, 'deg') * trotx(gripper(3), 'deg'))
+                pause(0.001);
+            end 
+        end
 
-        %% Gripper //////////////////////////////////////////
-        % function obj = SetupGrip(obj)
-        %     obj.Grip1 = obj.DeleteObject(obj.Grip1);
-        %     obj.Grip2 = obj.DeleteObject(obj.Grip2);
-        %     obj.Grip1 = PlaceObject('Newhand.ply');
-        %     obj.Grip2 = PlaceObject('Newhand2.ply');
-        %     pose = obj.robot.model.fkine(obj.robot.model.getpos).T;
-        %     % need to set z of end-effector to have offset in z about 0.0859
-        %     obj.RotateObject(obj.Grip1, [0,0,0], pose * trotz(180, 'deg') * trotx(-obj.GripDegree, 'deg'));
-        %     obj.RotateObject(obj.Grip2, [0,0,0], pose * trotz(180, 'deg') * trotx(obj.GripDegree, 'deg'));
-        % end
-        % function obj = DeleteObject(obj)
-        %     try delete(obj); end
-        % end
-        % function RotateObject (obj,location, degree)
-        %     % Define the rotation angle in degrees (e.g., 180 degrees)
-        %     rotationAngleDegrees = degree;
-        %     % Create a homogeneous transformation matrix for rotation
-        %     rotationMatrix = transl(location) * rotationAngleDegrees;            
-        %     % Get the object's vertices
-        %     vertices = get(obj, 'Vertices');
-        %     % Apply the rotation transformation to the object's vertices
-        %     transformedVertices = (rotationMatrix * [vertices, ones(size(vertices, 1), 1)]')';
-        %     % Update the object's vertices with the rotated vertices
-        %     set(obj, 'Vertices', transformedVertices(:, 1:3));
-        % end
+        %% intersection section
 
+        function lineIntersect = demonstrateIntersection(self, i)
+            % Parameters for the box
+            lineIntersect = false;
+            tr = transl([self.t(i), 0, 0]); %x,y,z
+            transformedVertices = [self.object_vertices, ones(size(self.object_vertices,1),1)] * tr';
+            set(self.object,'Vertices',transformedVertices(:,1:3));
+            
+            % Check for intersection with the box
+            if self.checkInsideBox(transformedVertices(:,1:3), self.box_center, self.box_width, self.box_height, self.box_depth)
+                disp('OBJECT INSIDE THE BOXXXXXX')
+                lineIntersect = true;
+                pause(1);
+            end                
+            pause(0.01);
+            
+        end
 
+        function [x_grid, y_grid, z_grid] = createPlane(self, point, width, height)
+            % point: A 1x3 vector [x, y, z] representing a point on the plane
+            % width: The width of the plane along the X-axis
+            % height: The height of the plane along the Y-axis
+            
+            % Create a grid of points for the plane
+            [y_grid, z_grid] = meshgrid(linspace(-height/2, height/2, 10), linspace(-width/2, width/2, 10));
+            x_grid = point(1) * ones(size(y_grid)); % x is constant for a vertical plane
+            
+            % Adjust y and z to be centered around the provided point
+            y_grid = y_grid + point(2);
+            z_grid = z_grid + point(3);
+        end
+        function intersect_point = lineIntersection(self, obj_start, obj_direction, plane_x)
+            % obj_start: A 1x3 vector [x, y, z] representing the starting point of the line
+            % obj_direction: A 1x3 vector [dx, dy, dz] representing the direction of the line
+            % plane_x: The x-coordinate of the vertical plane
+            
+            % Calculate the parameter t at which the line intersects the plane
+            t_intersect = (plane_x - obj_start(1)) / obj_direction(1);
+            
+            % Calculate the intersection point
+            intersect_point = obj_start + t_intersect * obj_direction;
+        end
+        function [planes] = createBox(self, center, width, height, depth)
+            % center: A 1x3 vector [x, y, z] representing the center of the box
+            % width: The width of the box along the X-axis
+            % height: The height of the box along the Y-axis
+            % depth: The depth of the box along the Z-axis
+            hold on;
+            % Initialize the planes structure
+            planes = struct('x_grid', [], 'y_grid', [], 'z_grid', []);
+            
+            % Half-dimensions
+            halfWidth = width / 2;
+            halfHeight = height / 2;
+            halfDepth = depth / 2;
+            
+            % Define the grid for each plane
+            [y_grid, z_grid] = meshgrid(linspace(-halfHeight, halfHeight, 10), linspace(-halfDepth, halfDepth, 10));
+            
+            % Front plane (x is constant)
+            planes(1).x_grid = (center(1) + halfWidth) * ones(size(y_grid));
+            planes(1).y_grid = y_grid + center(2);
+            planes(1).z_grid = z_grid + center(3);
+            
+            % Back plane (x is constant)
+            planes(2).x_grid = (center(1) - halfWidth) * ones(size(y_grid));
+            planes(2).y_grid = y_grid + center(2);
+            planes(2).z_grid = z_grid + center(3);
+            
+            % Left plane (y is constant)
+            planes(3).y_grid = (center(2) - halfHeight) * ones(size(z_grid));
+            planes(3).x_grid = z_grid + center(1); % z_grid reused for x since y is constant
+            planes(3).z_grid = y_grid + center(3); % y_grid reused for z
+            
+            % Right plane (y is constant)
+            planes(4).y_grid = (center(2) + halfHeight) * ones(size(z_grid));
+            planes(4).x_grid = z_grid + center(1); % z_grid reused for x since y is constant
+            planes(4).z_grid = y_grid + center(3); % y_grid reused for z
+        
+        end
+        function isInside = checkInsideBox(self, point, box_center, width, height, depth)
+            % Check if a point is inside the given box
+            halfWidth = width / 2;
+            halfHeight = height / 2;
+            halfDepth = depth / 2;
+            
+            isInside = point(1) >= (box_center(1) - halfWidth) && ...
+                       point(1) <= (box_center(1) + halfWidth) && ...
+                       point(2) >= (box_center(2) - halfHeight) && ...
+                       point(2) <= (box_center(2) + halfHeight) && ...
+                       point(3) >= (box_center(3) - halfDepth) && ...
+                       point(3) <= (box_center(3) + halfDepth);
+        end
     end
 end
 
