@@ -26,4 +26,10 @@ For any inquiries or contributions, please contact us through our university ema
 
 ---
 
+## Watch out for our video demonstration
+
+- Video [Sword fighting robots](https://youtu.be/rUnAnY1OY8c)
+- Video [Final demo video](https://www.youtube.com/watch?v=Tww2lX_qCgI&ab_channel=LaurenSeeto)
+
+
 Enjoy the thrill of sword fighting with the safety of IR technology!

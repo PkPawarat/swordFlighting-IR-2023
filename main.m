@@ -100,9 +100,9 @@ classdef main
             % self.DisplayAllPossiblePositionAndWorkspace('logs file/PositionUR5CanDo.txt');
             % 
             %% Execution 
-            % self.Execution();
+            self.Execution();
             % self.demonstrateIntersection(); 
-            [self.gripper,collision] = self.MoveRobotToLocation(self.robots, self.Preparepose, self.swords, self.sword_vertices, self.steps, false, true);
+            % [self.gripper,collision] = self.MoveRobotToLocation(self.robots, self.Preparepose, self.swords, self.sword_vertices, self.steps, false, true);
             
         end
 
@@ -171,7 +171,7 @@ classdef main
             % Create the box
             self.box_planes = self.createBox(self.box_center, self.box_width, self.box_height, self.box_depth);
             
-            self.object = PlaceObject('Star_wars_JAWA.ply');
+            self.object = PlaceObject('model3D/Star_wars_JAWA.ply');
             self.object_vertices = get(self.object,'Vertices');
             % Plot the planes of the box
             colors = ['r', 'g', 'b', 'y']; % Different color for each plane
