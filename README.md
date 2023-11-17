@@ -14,8 +14,8 @@ The aim of this project is to create an interactive experience that mimics sword
 
 ## Contributions
 This project is a collaborative effort by:
-- Student A (GitHub: [PkPawarat](https://github.com/PkPawarat))
-- Student B (GitHub: [Smleeep](https://github.com/Smleeep))
+- Student Pawarat Phatthanaphusakun 13662352 (GitHub: [PkPawarat](https://github.com/PkPawarat))
+- Student Lauren Seeto 14284032 (GitHub: [Smleeep](https://github.com/Smleeep))
 
 
 ## Acknowledgements
